@@ -1,4 +1,5 @@
 .DS_Store
+*.m~
 data/
 stimuli/
 +hwwba/+config/config.mat
