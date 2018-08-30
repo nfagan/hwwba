@@ -22,6 +22,7 @@ conf.(const.config_id) = true;
 PATHS = struct();
 PATHS.repositories = fileparts( hwwba.util.get_project_folder() );
 PATHS.stimuli = fullfile( hwwba.util.get_project_folder(), 'stimuli' );
+PATHS.data = fullfile( hwwba.util.get_project_folder(), 'data' );
 
 % DEPENDENCIES
 DEPENDS = struct();
@@ -32,6 +33,7 @@ INTERFACE = struct();
 INTERFACE.stop_key = KbName( 'escape' );
 INTERFACE.use_mouse = true;
 INTERFACE.use_reward = false;
+INTERFACE.save_data = true;
 
 %	SCREEN
 SCREEN = struct();

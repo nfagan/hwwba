@@ -16,6 +16,18 @@ WINDOW =      opts.WINDOW;
 cstate = 'new_trial';
 first_entry = true;
 
+DATA = struct();
+events = struct();
+errors = struct();
+
+TRIAL_NUMBER = 0;
+
+TIMER.add_timer( 'task', Inf );
+
+tracker_sync = struct();
+tracker_sync.timer = NaN;
+tracker_sync.interval = 1;
+
 while ( true )
 
   [key_pressed, ~, key_code] = KbCheck();
@@ -23,12 +35,33 @@ while ( true )
   if ( key_pressed )
     if ( key_code(INTERFACE.stop_key) ), break; end
   end
+  
+  if ( isnan(tracker_sync.timer) || tic(tracker_sync.timer) >= tracker_sync.interval )
+    TRACKER.send( 'RESYNCH' );
+    tracker_sync.timer = tic();
+  end
 
   TRACKER.update_coordinates();
 
   %   STATE new_trial
   if ( strcmp(cstate, 'new_trial') )
-    configure_images( STIMULI.image1, STIMULI.image2, STIMULI.setup.image_info );    
+    no_errors = ~any( structfun(@(x) x, errors) );
+    
+    if ( no_errors )
+      configure_images( STIMULI.image1, STIMULI.image2, STIMULI.setup.image_info );
+    end
+    
+    if ( TRIAL_NUMBER > 0 )
+      tn = TRIAL_NUMBER;
+      
+      DATA(tn).events = events;
+      DATA(tn).errors = errors;
+    end
+    
+    events = structfun( @(x) nan, events, 'un', 0 );
+    errors = structfun( @(x) false, errors, 'un', 0 );
+    
+    TRIAL_NUMBER = TRIAL_NUMBER + 1;
     
     cstate = 'fixation';
     first_entry = true;
@@ -39,13 +72,13 @@ while ( true )
     if ( first_entry )
       Screen( 'flip', WINDOW.index );
       TIMER.reset_timers( cstate );
-      %   get stimulus, and reset target timers
       fix_square = STIMULI.fix_square;
       fix_square.reset_targets();
-      %   reset current state variables
       acquired_target = false;
+      looked_to_target = false;
       drew_stimulus = false;
-      %   done with initial setup
+      errors.broke_fixation = false;
+      errors.fixation_not_met = false;
       first_entry = false;
     end
 
@@ -54,16 +87,28 @@ while ( true )
     if ( ~drew_stimulus )
       fix_square.draw();
       Screen( 'flip', WINDOW.index );
+      events.fixation_onset = TIMER.get_time( 'task' );
       drew_stimulus = true;
+    end
+    
+    if ( fix_square.in_bounds() )
+      looked_to_target = true;
+    elseif ( looked_to_target )
+      errors.broke_fixation = true;
+      cstate = 'new_trial';
+      first_entry = true;
+      continue;
     end
 
     if ( fix_square.duration_met() )
+      events.fixation_acquired = TIMER.get_time( 'task' );
       acquired_target = true;
       cstate = 'present_images';
       first_entry = true;
     end
 
     if ( TIMER.duration_met(cstate) && ~acquired_target )
+      errors.fixation_not_met = true;
       cstate = 'new_trial';
       first_entry = true;
     end
@@ -85,6 +130,7 @@ while ( true )
     if ( ~drew_stimulus )
       cellfun( @(x) x.draw(), image_stims );
       Screen( 'flip', WINDOW.index );
+      events.images_on = TIMER.get_time( 'task' );
       drew_stimulus = true;
     end
     
@@ -97,6 +143,7 @@ while ( true )
   %   STATE reward
   if ( strcmp(cstate, 'reward') )
     if ( first_entry )
+      events.reward_on = TIMER.get_time( 'task' );
       Screen( 'flip', WINDOW.index );
       first_entry = false;
     end
@@ -107,6 +154,15 @@ while ( true )
     end
   end
   
+end
+
+if ( opts.INTERFACE.save_data )
+  fname = datestr( now );
+  save_p = opts.PATHS.data;
+  
+  shared_utils.io.require_dir( save_p );
+  
+  save( fullfile(save_p, fname), 'DATA', 'opts' );
 end
 
 end

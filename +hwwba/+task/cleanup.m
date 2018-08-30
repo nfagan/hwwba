@@ -3,9 +3,13 @@ function cleanup(tracker)
 
 %   CLEANUP -- Close open files, ports, etc.
 
-sca;
+try
+  sca;
 
-ListenChar( 0 );
+  ListenChar( 0 );
+catch err
+  warning( err.message );
+end
 
 hwwba.util.close_ports();
 
