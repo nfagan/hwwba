@@ -36,7 +36,7 @@ while ( true )
     if ( key_code(INTERFACE.stop_key) ), break; end
   end
   
-  if ( isnan(tracker_sync.timer) || tic(tracker_sync.timer) >= tracker_sync.interval )
+  if ( isnan(tracker_sync.timer) || toc(tracker_sync.timer) >= tracker_sync.interval )
     TRACKER.send( 'RESYNCH' );
     tracker_sync.timer = tic();
   end

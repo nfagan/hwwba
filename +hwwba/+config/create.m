@@ -18,6 +18,11 @@ conf = struct();
 % ID
 conf.(const.config_id) = true;
 
+% META
+META = struct();
+META.subject = '';
+META.date = '';
+
 % PATHS
 PATHS = struct();
 PATHS.repositories = fileparts( hwwba.util.get_project_folder() );
@@ -34,6 +39,7 @@ INTERFACE.stop_key = KbName( 'escape' );
 INTERFACE.use_mouse = true;
 INTERFACE.use_reward = false;
 INTERFACE.save_data = true;
+INTERFACE.gui_fields.exclude = { 'stop_key' };
 
 %	SCREEN
 SCREEN = struct();
@@ -91,12 +97,18 @@ STIMULI.setup.image2 = struct( ...
   , 'non_editable',     non_editable_properties ...
 );
 
+% REWARDS
+REWARDS = struct();
+REWARDS.key_press = 100;
+REWARDS.main = 100;
+
 %	SERIAL
 SERIAL = struct();
 SERIAL.port = 'COM3';
 SERIAL.channels = { 'A' };
 
 % EXPORT
+conf.META = META;
 conf.PATHS = PATHS;
 conf.DEPENDS = DEPENDS;
 conf.TIMINGS = TIMINGS;
@@ -104,6 +116,7 @@ conf.STIMULI = STIMULI;
 conf.SCREEN = SCREEN;
 conf.INTERFACE = INTERFACE;
 conf.SERIAL = SERIAL;
+conf.REWARDS = REWARDS;
 
 if ( do_save )
   hwwba.config.save( conf );
