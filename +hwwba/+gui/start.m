@@ -126,11 +126,20 @@ handle_stimuli_popup();
 % - TASK TIMES
 panels.time_in = uipanel( F ...
   , 'Title', 'Time in states' ...
-  , 'Position', [ X+W/2, Y, W/2, L ] ...
+  , 'Position', [ X+W/2, Y, W/2, L/2 ] ...
 );
-text_pos = struct( 'x', 0, 'y', 0, 'w', .5 );
-field_pos = struct( 'x', .5, 'y', 0, 'w', .5 );
-text_field_creator( panels.time_in, 'TIMINGS', {'time_in'}, text_pos, field_pos );
+handle_timein_popup();
+
+% - TASK DELAYS
+panels.delays = uipanel( F ...
+  , 'Title', 'Delays' ...
+  , 'Position', [ X+W/2, Y+L/2, W/2, L/2 ] ...
+);
+
+text_pos =  struct( 'x', 0,   'y', 0.5, 'w', .5 );
+field_pos = struct( 'x', .5,  'y', 0.5, 'w', .5 );
+text_field_creator( panels.delays, 'TIMINGS', {'delays'}, text_pos, field_pos );
+
 
 Y = Y + L;
 
@@ -140,7 +149,8 @@ panels.run = uipanel( F ...
   , 'Position', [ X, Y, W, L ] ...
 );
 
-funcs = { 'hard reset', 'clean-up', 'start' };
+funcs = { 'hard reset', 'clean-up' ...
+  , 'Joint Attention', 'Biased Attention', 'Attentional Capture', 'Gaze Following' };
 w = .5;
 l = 1 / numel(funcs);
 x = 0;
@@ -197,11 +207,22 @@ function handle_button(source, event)
   
   func = source.String;
   switch ( func )
-    case 'start'
+    case 'Biased Attention'
       hwwba.config.save( config );
-      hwwba.task.start();
-    case 'setup reward sizes'
-      handle_reward_size_setup();
+      hwwba.task.start( @hwwba.task.run_biased_attention, config);
+      
+    case 'Joint Attention'
+      hwwba.config.save( config );
+      hwwba.task.start( @hwwba.task.run_joint_attention, config);
+      
+    case 'Attentional Capture'
+      hwwba.config.save( config );
+      hwwba.task.start( @hwwba.task.run_attentional_capture, config);
+      
+    case 'Gaze Following'
+      hwwba.config.save( config );
+      hwwba.task.start( @hwwba.task.run_gaze_following, config);
+      
     case 'clean-up'
       hwwba.config.save( config );
       hwwba.task.cleanup();
@@ -241,6 +262,77 @@ function handle_textfields(source, event)
     eval( sprintf( '%s = ''%s'';', identifier, val ) );  
   end
   hwwba.config.save( config );
+end
+
+% - TIME IN - %
+
+function handle_timein_popup(source, event)
+  
+  persistent target;
+  
+  w_ = 0.5;
+  l_ = 0.5;
+  x_ = 0;
+  y_ = 0;
+  
+  position_ = [ x_, y_, w_, l_ ];
+  
+  time_in = config.TIMINGS.time_in;
+  strs = fieldnames( time_in );
+  
+  if ( numel(strs) == 0 )
+    warning( 'No state times given. Skipping time_in construction.' );
+    return;
+  end
+  
+  if ( isempty(target) )
+    target = strs{1};
+  end
+  
+  idx = find( strcmp(strs, target) );
+  
+  uicontrol( panels.time_in ...
+    , 'Style',  'edit' ...
+    , 'String',  time_in.(strs{idx}) ...
+    , 'Units',  'normalized' ...
+    , 'Position', position_ ...
+    , 'Callback', @handle_timein_edit ...
+  );
+
+  position_ = [ x_+w_, y_, w_, l_ ];
+  uicontrol( panels.time_in ...
+    , 'Style',      'popup' ...
+    , 'String',     strs ...
+    , 'Value',      idx ...
+    , 'Units',      'normalized' ...
+    , 'Tag',        'timein_selector' ...
+    , 'Position',   position_ ...
+    , 'Callback',   @handle_timein_select ...
+  );
+
+  function handle_timein_select(source, event)
+    
+    target = source.String{source.Value};
+    
+    handle_timein_popup();
+  end
+
+  function handle_timein_edit(source, event)    
+    try
+      new_time = str2double( source.String );
+      
+      assert( ~isempty(new_time), 'Time cannot be empty.' );
+      assert( ~isnan(new_time), 'Invalid time value; cannot be NaN.' );
+    catch err
+      warning( err.message );
+      return;
+    end 
+    
+    config.TIMINGS.time_in.(target) = new_time;
+    
+    hwwba.config.save( config );
+  end
+  
 end
 
 % - STIMULI - %

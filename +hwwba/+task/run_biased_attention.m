@@ -73,6 +73,7 @@ while ( true )
   %   STATE ba_fixation
   if ( strcmp(cstate, 'ba_fixation') )
     if ( first_entry )
+      LOG_DEBUG(['Entered ', cstate], 'entry');
       Screen( 'flip', WINDOW.index );
       TIMER.reset_timers( cstate );
       fix_square = STIMULI.fix_square;
@@ -120,6 +121,7 @@ while ( true )
   %   STATE ba_present_images
   if ( strcmp(cstate, 'ba_present_images') )
     if ( first_entry )
+      LOG_DEBUG(['Entered ', cstate], 'entry');
       Screen( 'flip', WINDOW.index );
       TIMER.reset_timers( cstate );
       
@@ -146,8 +148,9 @@ while ( true )
   %   STATE ba_reward
   if ( strcmp(cstate, 'ba_reward') )
     if ( first_entry )
-      events.reward_on = TIMER.get_time( 'task' );
+      LOG_DEBUG(['Entered ', cstate], 'entry');
       Screen( 'flip', WINDOW.index );
+      events.reward_on = TIMER.get_time( 'task' );
       first_entry = false;
     end
     
@@ -157,6 +160,24 @@ while ( true )
     end
   end
   
+end
+
+function LOG_DEBUG(msg, tag)
+  if ( ~opts.INTERFACE.is_debug )
+    return;
+  end
+  
+  if ( nargin < 2 )
+    should_display = true;
+  else
+    tags = opts.INTERFACE.debug_tags;
+    is_all = numel(tags) == 1 && strcmp( tags, 'all' );
+    should_display =  is_all || ismember( tag, tags );
+  end
+  
+  if ( should_display )
+    fprintf( '\n%s', msg );
+  end
 end
 
 if ( opts.INTERFACE.save_data )

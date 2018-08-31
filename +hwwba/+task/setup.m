@@ -113,20 +113,33 @@ for i = 1:numel(subfolders)
 
   walk_func = @(p, level) ...
     deal( ...
-        horzcat_imread(percell(@(x) shared_utils.io.find(p, x), fmts)) ...
+        {horzcat_mult(percell(@(x) shared_utils.io.find(p, x), fmts))} ...
       , numel(horzcat_mult(percell(@(x) shared_utils.io.find(p, x), fmts))) > 0 ...
     );
 
-  [images, image_components] = shared_utils.io.walk( ...
+  [image_fullfiles, image_components] = shared_utils.io.walk( ...
       fullfile(image_path, subfolders{i}), walk_func ...
     , 'outputs', true ...
     , 'max_depth', max_depth ...
   );
 
-image_info.(subfolders{i}) = [ image_components, images ];
+  images = cell( size(image_fullfiles) );
+  image_filenames = cell( size(image_fullfiles) );
+
+  for j = 1:numel(image_fullfiles)
+    images{j} = cellfun( @imread, image_fullfiles{j}, 'un', 0 );
+    image_filenames{j} = cellfun( @fname, image_fullfiles{j}, 'un', 0 );
+  end
+
+  image_info.(subfolders{i}) = [ image_components, image_fullfiles, image_filenames, images ];
 
 end
 
+end
+
+function y = fname(x)
+[~, y, ext] = fileparts( x );
+y = [ y, ext ];
 end
 
 function y = horzcat_mult(x)

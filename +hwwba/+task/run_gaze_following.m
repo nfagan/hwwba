@@ -1,5 +1,5 @@
 
-function run_joint_attention(opts)
+function run_gaze_following(opts)
 
 %   RUN -- Run the task based on the saved config file options.
 %
@@ -11,6 +11,7 @@ TIMER =       opts.TIMER;
 STIMULI =     opts.STIMULI;
 TRACKER =     opts.TRACKER;
 WINDOW =      opts.WINDOW;
+TIMINGS =     opts.TIMINGS;
 
 %   begin in this state
 cstate = 'new_trial';
@@ -19,6 +20,12 @@ first_entry = true;
 DATA = struct();
 events = struct();
 errors = struct();
+
+P_CONSISTENT = 0.7;
+BLOCK_SIZE = 10;
+
+consistent_types = get_trial_types( P_CONSISTENT, BLOCK_SIZE );
+TRIAL_IN_BLOCK = 1;
 
 TRIAL_NUMBER = 0;
 
@@ -50,32 +57,69 @@ while ( true )
   if ( strcmp(cstate, 'new_trial') )
     LOG_DEBUG(['Entered ', cstate], 'entry');
     
-    no_errors = ~any( structfun(@(x) x, errors) );
-    
-    if ( no_errors )
-      configure_images( STIMULI.ja_image1, STIMULI.setup.image_info.ja );
-    end
-    
     if ( TRIAL_NUMBER > 0 )
       tn = TRIAL_NUMBER;
       
       DATA(tn).events = events;
       DATA(tn).errors = errors;
-      DATA(tn).response_direction = ja_response_direction;
+      DATA(tn).delay = current_delay;
+      DATA(tn).look_direction = current_look_direction;
+      DATA(tn).trial_type = current_trial_type;
+      DATA(tn).image_file = current_image_file;
+    end
+    
+    no_errors = ~any( structfun(@(x) x, errors) );
+    
+    if ( no_errors )
+      is_right = rand() > 0.5;
+
+      if ( is_right )
+        current_look_direction = 'center-right';
+      else
+        current_look_direction = 'center-left';
+      end
+    end
+    
+    delays = TIMINGS.delays.gf_pre_target_delay;
+    current_delay = delays( randi(numel(delays)) );
+    
+    current_trial_type_logical = consistent_types(TRIAL_IN_BLOCK);
+    
+    if ( current_trial_type_logical )
+      current_trial_type = 'consistent';
+    else
+      current_trial_type = 'inconsistent';
     end
     
     events = structfun( @(x) nan, events, 'un', 0 );
     errors = structfun( @(x) false, errors, 'un', 0 );
-    ja_response_direction = '';
+    
+    current_image_file = configure_images( ...
+      STIMULI.gf_image1, STIMULI.setup.image_info.gf, current_look_direction ...
+    );
+  
+    LOG_DEBUG(['Current trial type is: ', current_trial_type], 'param');
+    LOG_DEBUG(['Current delay is:      ', num2str(current_delay)], 'param');
+    LOG_DEBUG(['Current file is:       ', current_image_file], 'param');
+    LOG_DEBUG(['Current direction is:  ', current_look_direction], 'param');
     
     TRIAL_NUMBER = TRIAL_NUMBER + 1;
     
-    cstate = 'ja_fixation';
+    if ( no_errors )
+      TRIAL_IN_BLOCK = TRIAL_IN_BLOCK + 1;
+    end
+    
+    if ( TRIAL_IN_BLOCK > BLOCK_SIZE )
+      TRIAL_IN_BLOCK = 1;
+      consistent_types = consistent_types( randperm(BLOCK_SIZE) );
+    end
+    
+    cstate = 'gf_fixation';
     first_entry = true;
   end
 
-  %   STATE ja_fixation
-  if ( strcmp(cstate, 'ja_fixation') )
+  %   STATE gf_fixation
+  if ( strcmp(cstate, 'gf_fixation') )
     if ( first_entry )
       LOG_DEBUG(['Entered ', cstate], 'entry');
       Screen( 'flip', WINDOW.index );
@@ -111,7 +155,7 @@ while ( true )
     if ( fix_square.duration_met() )
       events.fixation_acquired = TIMER.get_time( 'task' );
       acquired_target = true;
-      cstate = 'ja_present_image';
+      cstate = 'gf_present_image';
       first_entry = true;
     end
 
@@ -122,14 +166,14 @@ while ( true )
     end
   end
   
-  %   STATE ja_present_image
-  if ( strcmp(cstate, 'ja_present_image') )
+  %   STATE gf_present_image
+  if ( strcmp(cstate, 'gf_present_image') )
     if ( first_entry )
       LOG_DEBUG(['Entered ', cstate], 'entry');
       Screen( 'flip', WINDOW.index );
       TIMER.reset_timers( cstate );
-      
-      image_stims = { STIMULI.ja_image1 };
+       
+      image_stims = { STIMULI.gf_image1; };
       
       cellfun( @(x) x.reset_targets(), image_stims );
       drew_stimulus = false;
@@ -144,79 +188,96 @@ while ( true )
     end
     
     if ( TIMER.duration_met(cstate) )
-      cstate = 'ja_response';
+      cstate = 'gf_pre_target_delay';
       first_entry = true;
     end
   end
   
-  %   STATE ja_response
-  if ( strcmp(cstate, 'ja_response') )
+  %   STATE gf_pre_target_delay
+  if ( strcmp(cstate, 'gf_pre_target_delay') )
     if ( first_entry )
       LOG_DEBUG(['Entered ', cstate], 'entry');
-      Screen( 'flip', WINDOW.index );
       TIMER.reset_timers( cstate );
+      TIMER.set_durations( cstate, current_delay );
       
-      stims = { STIMULI.ja_response1, STIMULI.ja_response2 };
+      image_stims = { STIMULI.gf_image1 };
       
-      ja_response_direction = '';
-      looked_to = '';
-      
-      errors.no_response = false;
-      errors.broke_target_fixation = false;
-      
-      cellfun( @(x) x.reset_targets(), stims );
+      cellfun( @(x) x.reset_targets(), image_stims );
       drew_stimulus = false;
       first_entry = false;
     end
     
+    if ( TIMER.duration_met(cstate) )
+      cstate = 'gf_response';
+      first_entry = true;
+    end
+  end
+  
+  %   STATE gf_response
+  if ( strcmp(cstate, 'gf_response') )
+    if ( first_entry )
+      LOG_DEBUG(['Entered ', cstate], 'entry');
+      TIMER.reset_timers( cstate );
+      
+      errors.broke_target_fixation = false;
+      errors.target_fixation_not_met = false;
+      
+      response_target = STIMULI.gf_response1;
+      image_stims = { STIMULI.gf_image1, response_target };
+      
+      response_target.put( current_look_direction );
+      
+      cellfun( @(x) x.reset_targets(), image_stims );
+      drew_stimulus = false;
+      looked_to_target = false;
+      
+      first_entry = false;
+    end
+    
     if ( ~drew_stimulus )
-      cellfun( @(x) x.draw(), stims );
+      cellfun( @(x) x.draw(), image_stims );
       Screen( 'flip', WINDOW.index );
-      events.response_targets_on = TIMER.get_time( 'task' );
+      events.images_on = TIMER.get_time( 'task' );
       drew_stimulus = true;
     end
     
-    for i = 1:numel(stims)
-      if ( ~stims{i}.in_bounds() )
-        if ( ~isempty(looked_to) && strcmp(looked_to, stims{i}.placement) )
-          ja_response_direction = '';
-          errors.broke_target_fixation = true;
-          cstate = 'ja_response_error';
-          continue;
-        end
-      else
-        looked_to = stims{i}.placement;
-      end
+    if ( response_target.in_bounds() )
+      looked_to_target = true;
+    elseif ( looked_to_target )
+      errors.broke_target_fixation = true;
+      cstate = 'gf_target_error';
+      first_entry = true;
+      continue;
     end
     
-    if ( stims{1}.duration_met() )
-      ja_response_direction = stims{1}.placement;
-    elseif ( stims{2}.duration_met() )
-      ja_response_direction = stims{2}.placement;
-    end
-    
-    if ( ~isempty(ja_response_direction) )
-      LOG_DEBUG( ['Chose: ', ja_response_direction], 'response' );
-      cstate = 'ja_reward';
+    if ( response_target.duration_met() )
+      cstate = 'gf_reward';
       first_entry = true;
       continue;
     end
     
     if ( TIMER.duration_met(cstate) )
-      errors.no_response = true;
-      cstate = 'ja_response_error';
+      errors.target_fixation_not_met = true;
+      cstate = 'gf_target_error';
       first_entry = true;
     end
   end
   
-  %   STATE ja_reward
-  if ( strcmp(cstate, 'ja_reward') )
+  %   STATE gf_target_error
+  if ( strcmp(cstate, 'gf_target_error') )
     if ( first_entry )
       LOG_DEBUG(['Entered ', cstate], 'entry');
-      events.reward_on = TIMER.get_time( 'task' );
       TIMER.reset_timers( cstate );
+      events.reward_on = TIMER.get_time( 'task' );
       Screen( 'flip', WINDOW.index );
+      drew_error = false;
       first_entry = false;
+    end
+    
+    if ( ~drew_error )
+      STIMULI.generic_error.draw();
+      Screen( 'flip', WINDOW.index );
+      drew_error = true;
     end
     
     if ( TIMER.duration_met(cstate) )
@@ -225,12 +286,12 @@ while ( true )
     end
   end
   
-  %   STATE ja_response_error
-  if ( strcmp(cstate, 'ja_response_error') )
+  %   STATE gf_reward
+  if ( strcmp(cstate, 'gf_reward') )
     if ( first_entry )
       LOG_DEBUG(['Entered ', cstate], 'entry');
-      events.ja_response_error = TIMER.get_time( 'task' );
       TIMER.reset_timers( cstate );
+      events.reward_on = TIMER.get_time( 'task' );
       Screen( 'flip', WINDOW.index );
       first_entry = false;
     end
@@ -245,7 +306,7 @@ end
 
 if ( opts.INTERFACE.save_data )
   fname = datestr( now );
-  save_p = fullfile( opts.PATHS.data, 'ja' );
+  save_p = fullfile( opts.PATHS.data, 'gf' );
   
   shared_utils.io.require_dir( save_p );
   
@@ -272,15 +333,41 @@ end
 
 end
 
-function configure_images(img1, image_info)
+function ts = get_trial_types(probability, block_size)
+
+ts = zeros( block_size, 1 );
+n_1 = round( block_size * probability );
+true_inds = randperm( block_size, n_1 );
+ts(true_inds) = true;
+
+end
+
+function name = configure_images(img1, image_info, look_direction)
+
+if ( ~isa(img1, 'Image') )
+  warning( 'Stimulus is not an image.' );
+  return
+end
 
 images = image_info(:, end);
+filenames = image_info(:, end-1);
+image_directions = image_info(:, 1);
 
-if ( isa(img1, 'Image') )
+matches = cellfun( @(x) ~isempty(strfind(look_direction, x)), image_directions );
+
+if ( sum(matches) ~= 1 )
+  warning( 'No or more than one image matched look direction "%s"', look_direction );
   img1.image = images{1}{1};
-else
-  disp( 'WARN: Image 1 is not an image.' );
+  return;
 end
+
+matching_imgs = images{matches};
+matching_filenames = filenames{matches};
+
+img_ind = randi( numel(matching_imgs) );
+
+img1.image = matching_imgs{img_ind};
+name = matching_filenames{img_ind};
 
 end
 	
