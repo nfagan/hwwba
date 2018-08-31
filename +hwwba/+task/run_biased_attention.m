@@ -181,13 +181,17 @@ function LOG_DEBUG(msg, tag)
 end
 
 if ( opts.INTERFACE.save_data )
-  fname = datestr( now );
+  fname = sprintf( '%s.mat', strrep(datestr(now), ':', '_') );
   save_p = fullfile( opts.PATHS.data, 'ba' );
   
   shared_utils.io.require_dir( save_p );
   
-  save( fullfile(save_p, fname), 'DATA', 'opts' );
+  edf_file = TRACKER.edf;
+  
+  save( fullfile(save_p, fname), 'DATA', 'opts', 'edf_file' );
 end
+
+TRACKER.shutdown();
 
 end
 

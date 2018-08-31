@@ -25,6 +25,10 @@ catch err
   warning( err.message );
 end
 
+if ( opts.INTERFACE.skip_sync_tests )
+  Screen( 'Preference', 'SkipSyncTests', 1 );
+end
+
 STIMULI = opts.STIMULI;
 SCREEN = opts.SCREEN;
 SERIAL = opts.SERIAL;
@@ -39,7 +43,8 @@ WINDOW.index = windex;
 WINDOW.rect = wrect;
 
 %   TRACKER
-TRACKER = EyeTracker( '', cd, WINDOW.index );
+data_path = opts.PATHS.data;
+TRACKER = EyeTracker( hwwba.util.get_edf_filename(data_path), data_path, WINDOW.index );
 TRACKER.bypass = opts.INTERFACE.use_mouse;
 TRACKER.init();
 

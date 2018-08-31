@@ -33,9 +33,12 @@ PATHS.data = fullfile( hwwba.util.get_project_folder(), 'data' );
 DEPENDS = struct();
 DEPENDS.repositories = { 'ptb_helpers', 'serial_comm', 'shared_utils' };
 
+esc_key = try_get_escape_key();
+
 %	INTERFACE
 INTERFACE = struct();
-INTERFACE.stop_key = KbName( 'escape' );
+INTERFACE.skip_sync_tests = false;
+INTERFACE.stop_key = esc_key;
 INTERFACE.use_mouse = true;
 INTERFACE.use_reward = false;
 INTERFACE.save_data = true;
@@ -231,6 +234,22 @@ conf.REWARDS = REWARDS;
 
 if ( do_save )
   hwwba.config.save( conf );
+end
+
+end
+
+function esc_key = try_get_escape_key()
+
+try
+  esc_key = KbName( 'escape' );
+catch err1
+  try
+    KbName( 'UnifyKeyNames' );
+    esc_key = KbName( 'escape' );
+  catch err2
+    warning( err2.message );
+    esc_key = 27;
+  end
 end
 
 end
