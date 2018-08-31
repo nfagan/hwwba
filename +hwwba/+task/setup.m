@@ -48,7 +48,7 @@ TIMER = Timer();
 TIMER.register( opts.TIMINGS.time_in );
 
 %   IMAGES
-image_info = get_images( fullfile(PATHS.stimuli, 'images') );
+image_info = get_images( PATHS.stimuli );
 
 %   STIMULI
 stim_fs = fieldnames( STIMULI.setup );
@@ -65,6 +65,11 @@ for i = 1:numel(stim_fs)
   end
   stim_.color = stim.color;
   stim_.put( stim.placement );
+  
+  if ( isfield(stim, 'shift') )
+%     stim_.shift( stim.shift(1), stim.shift(2) );
+  end
+  
   if ( stim.has_target )
     duration = stim.target_duration;
     padding = stim.target_padding;
@@ -98,26 +103,37 @@ percell = @(varargin) cellfun( varargin{:}, 'un', 0 );
 
 fmts = { '.png', '.jpg', '.jpeg' };
 
-max_depth = 2;
+max_depth = 3;
 
-walk_func = @(p, level) ...
-  deal( ...
-      horzcat_imread(percell(@(x) shared_utils.io.find(p, x), fmts)) ...
-    , level == max_depth ...
+subfolders = shared_utils.io.dirnames( image_path, 'folders' );
+
+image_info = struct();
+
+for i = 1:numel(subfolders)
+
+  walk_func = @(p, level) ...
+    deal( ...
+        horzcat_imread(percell(@(x) shared_utils.io.find(p, x), fmts)) ...
+      , numel(horzcat_mult(percell(@(x) shared_utils.io.find(p, x), fmts))) > 0 ...
+    );
+
+  [images, image_components] = shared_utils.io.walk( ...
+      fullfile(image_path, subfolders{i}), walk_func ...
+    , 'outputs', true ...
+    , 'max_depth', max_depth ...
   );
 
-[images, image_components] = shared_utils.io.walk( ...
-    image_path, walk_func ...
-  , 'outputs', true ...
-  , 'max_depth', max_depth ...
-);
-
-image_info = [ image_components, images ];
+image_info.(subfolders{i}) = [ image_components, images ];
 
 end
 
-function y = horzcat_imread(x)
+end
+
+function y = horzcat_mult(x)
 y = horzcat( x{:} );
-y = { cellfun(@(z) imread(z), y, 'un', 0) };
+end
+
+function y = horzcat_imread(x)
+y = { cellfun(@(z) imread(z), horzcat_mult(x), 'un', 0) };
 end
 

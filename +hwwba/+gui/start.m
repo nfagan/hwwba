@@ -112,15 +112,6 @@ text_pos =  struct( 'x', 0,   'y', 0, 'w', .5 );
 field_pos = struct( 'x', .5,  'y', 0, 'w', .5 );
 text_field_creator( panels.reward, 'REWARDS', {}, text_pos, field_pos );
 
-% % - STRUCTURE - %
-% panels.structure = uipanel( panels.interface ...
-%   , 'Title', 'Structure' ...
-%   , 'Position', [ .75, 0, .25, 1 ] ...
-% );
-% text_pos =  struct( 'x', 0,   'y', 0, 'w', .5 );
-% field_pos = struct( 'x', .5,  'y', 0, 'w', .5 );
-% text_field_creator( panels.structure, 'STRUCTURE', {}, text_pos, field_pos );
-
 Y = Y + L;
 
 % - STIMULI - %

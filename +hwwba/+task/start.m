@@ -1,5 +1,5 @@
 
-function err = start(conf)
+function err = start(task_func, conf)
 
 %   START -- Attempt to setup and run the task.
 %
@@ -7,7 +7,7 @@ function err = start(conf)
 %       - `err` (double, MException) -- 0 if successful; otherwise, the
 %         raised MException, if setup / run fails.
 
-if ( nargin < 1 || isempty(conf) )
+if ( nargin < 2 || isempty(conf) )
   conf = hwwba.config.load();
 else
   hwwba.util.assertions.assert__is_config( conf );
@@ -23,7 +23,7 @@ end
 
 try
   err = 0;
-  hwwba.task.run( opts );
+  task_func( opts );
   hwwba.task.cleanup();
 catch err
   hwwba.task.cleanup();

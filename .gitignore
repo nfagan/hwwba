@@ -2,5 +2,6 @@
 *.m~
 data/
 stimuli/
+__archive__/
 +hwwba/+config/config.mat
 +hwwba/+config/default.mat

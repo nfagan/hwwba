@@ -1,5 +1,5 @@
 
-function run(opts)
+function run_attentional_capture(opts)
 
 %   RUN -- Run the task based on the saved config file options.
 %
@@ -28,6 +28,8 @@ tracker_sync = struct();
 tracker_sync.timer = NaN;
 tracker_sync.interval = 1;
 
+stim_handles = rmfield( STIMULI, 'setup' );
+
 while ( true )
 
   [key_pressed, ~, key_code] = KbCheck();
@@ -42,13 +44,16 @@ while ( true )
   end
 
   TRACKER.update_coordinates();
+  structfun( @(x) x.update_targets(), stim_handles );
 
   %   STATE new_trial
   if ( strcmp(cstate, 'new_trial') )
+    LOG_DEBUG(['Entered ', cstate]);
+    
     no_errors = ~any( structfun(@(x) x, errors) );
     
     if ( no_errors )
-      configure_images( STIMULI.image1, STIMULI.image2, STIMULI.setup.image_info );
+      configure_images( STIMULI.ac_image1, STIMULI.setup.image_info.ac );
     end
     
     if ( TRIAL_NUMBER > 0 )
@@ -63,13 +68,14 @@ while ( true )
     
     TRIAL_NUMBER = TRIAL_NUMBER + 1;
     
-    cstate = 'fixation';
+    cstate = 'ac_fixation';
     first_entry = true;
   end
 
-  %   STATE fixation
-  if ( strcmp(cstate, 'fixation') )
+  %   STATE ac_fixation
+  if ( strcmp(cstate, 'ac_fixation') )
     if ( first_entry )
+      LOG_DEBUG(['Entered ', cstate]);
       Screen( 'flip', WINDOW.index );
       TIMER.reset_timers( cstate );
       fix_square = STIMULI.fix_square;
@@ -103,7 +109,7 @@ while ( true )
     if ( fix_square.duration_met() )
       events.fixation_acquired = TIMER.get_time( 'task' );
       acquired_target = true;
-      cstate = 'present_images';
+      cstate = 'ac_present_images';
       first_entry = true;
     end
 
@@ -114,13 +120,14 @@ while ( true )
     end
   end
   
-  %   STATE present_images
-  if ( strcmp(cstate, 'present_images') )
+  %   STATE ac_present_images
+  if ( strcmp(cstate, 'ac_present_images') )
     if ( first_entry )
+      LOG_DEBUG(['Entered ', cstate]);
       Screen( 'flip', WINDOW.index );
       TIMER.reset_timers( cstate );
       
-      image_stims = { STIMULI.image1, STIMULI.image2 };
+      image_stims = { STIMULI.ac_image1, STIMULI.ac_response1 };
       
       cellfun( @(x) x.reset_targets(), image_stims );
       drew_stimulus = false;
@@ -135,14 +142,15 @@ while ( true )
     end
     
     if ( TIMER.duration_met(cstate) )
-      cstate = 'reward';
+      cstate = 'ac_reward';
       first_entry = true;
     end
   end
   
-  %   STATE reward
-  if ( strcmp(cstate, 'reward') )
+  %   STATE ac_reward
+  if ( strcmp(cstate, 'ac_reward') )
     if ( first_entry )
+      LOG_DEBUG(['Entered ', cstate]);
       events.reward_on = TIMER.get_time( 'task' );
       Screen( 'flip', WINDOW.index );
       first_entry = false;
@@ -158,16 +166,22 @@ end
 
 if ( opts.INTERFACE.save_data )
   fname = datestr( now );
-  save_p = opts.PATHS.data;
+  save_p = fullfile( opts.PATHS.data, 'ac' );
   
   shared_utils.io.require_dir( save_p );
   
   save( fullfile(save_p, fname), 'DATA', 'opts' );
 end
 
+function LOG_DEBUG(msg)
+  if ( opts.INTERFACE.is_debug )
+    fprintf( '\n%s', msg );
+  end
 end
 
-function configure_images(img1, img2, image_info)
+end
+
+function configure_images(img1, image_info)
 
 images = image_info(:, end);
 
@@ -175,12 +189,6 @@ if ( isa(img1, 'Image') )
   img1.image = images{1}{1};
 else
   disp( 'WARN: Image 1 is not an image.' );
-end
-
-if ( isa(img2, 'Image') )
-  img2.image = images{1}{1};
-else
-  disp( 'WARN: Image 2 is not an image.' );
 end
 
 end
