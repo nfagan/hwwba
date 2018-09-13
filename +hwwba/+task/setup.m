@@ -87,8 +87,7 @@ end
 STIMULI.setup.image_info = image_info;
 
 %   SERIAL
-comm = serial_comm.SerialManager( SERIAL.port, struct(), SERIAL.channels );
-comm.bypass = ~opts.INTERFACE.use_reward;
+comm = hwwba.util.get_serial_comm( opts );
 comm.start();
 SERIAL.comm = comm;
 
