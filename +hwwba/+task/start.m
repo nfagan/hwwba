@@ -14,7 +14,8 @@ else
 end
 
 try
-  opts = hwwba.task.setup( conf );
+  m = hwwba.util.get_function_to_stimuli_subfolder_map();
+  opts = hwwba.task.setup( conf, m(func2str(task_func)) );
 catch err
   hwwba.task.cleanup();
   hwwba.util.print_error_stack( err );

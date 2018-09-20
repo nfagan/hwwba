@@ -1,5 +1,5 @@
 
-function opts = setup(opts)
+function opts = setup(opts, stimuli_subdirectory)
 
 %   SETUP -- Prepare to run the task based on the saved config file.
 %
@@ -17,6 +17,8 @@ end
 
 %   add missing fields to `opts` as necessary
 opts = hwwba.config.reconcile( opts );
+
+is_debug = opts.INTERFACE.is_debug;
 
 try
   hwwba.util.add_depends( opts );
@@ -53,7 +55,10 @@ TIMER = Timer();
 TIMER.register( opts.TIMINGS.time_in );
 
 %   IMAGES
-image_info = get_images( PATHS.stimuli );
+max_number_of_images = 20;
+stimuli_subdirs = { stimuli_subdirectory };
+
+image_info = get_images( PATHS.stimuli, is_debug, max_number_of_images, stimuli_subdirs );
 
 %   STIMULI
 stim_fs = fieldnames( STIMULI.setup );
@@ -100,25 +105,34 @@ opts.SERIAL = SERIAL;
 
 end
 
-function image_info = get_images(image_path)
+function image_info = get_images(image_path, is_debug, max_n, subfolders)
 
 import shared_utils.io.dirnames;
 percell = @(varargin) cellfun( varargin{:}, 'un', 0 );
 
+% walk setup
 fmts = { '.png', '.jpg', '.jpeg' };
-
 max_depth = 3;
+%   exclude files that have __archive__ in them
+condition_func = @(p) isempty(strfind(p, '__archive__'));
+%   find files that end in any of `fmts`
+find_func = @(p) percell(@(x) shared_utils.io.find(p, x), fmts);
+%   include files if more than 0 files match, and condition_func returns
+%   false.
+include_func = @(p) condition_func(p) && numel(horzcat_mult(find_func(p))) > 0;
 
-subfolders = shared_utils.io.dirnames( image_path, 'folders' );
+if ( nargin < 4 )
+  subfolders = shared_utils.io.dirnames( image_path, 'folders' );
+end
 
 image_info = struct();
 
 for i = 1:numel(subfolders)
-
+  
   walk_func = @(p, level) ...
     deal( ...
         {horzcat_mult(percell(@(x) shared_utils.io.find(p, x), fmts))} ...
-      , numel(horzcat_mult(percell(@(x) shared_utils.io.find(p, x), fmts))) > 0 ...
+      , include_func(p) ...
     );
 
   [image_fullfiles, image_components] = shared_utils.io.walk( ...
@@ -131,7 +145,24 @@ for i = 1:numel(subfolders)
   image_filenames = cell( size(image_fullfiles) );
 
   for j = 1:numel(image_fullfiles)
-    images{j} = cellfun( @imread, image_fullfiles{j}, 'un', 0 );
+    if ( is_debug )
+      fprintf( '\n Image set %d of %d', j, numel(image_fullfiles) );
+    end
+    
+    fullfiles = image_fullfiles{j};
+    
+    use_n = min( numel(fullfiles), max_n );
+    imgs = cell( use_n, 1 );
+    
+    for k = 1:use_n
+      if ( is_debug )
+        [~, filename] = fileparts( fullfiles{k} );
+        fprintf( '\n\t Image "%s": %d of %d', filename, k, numel(imgs) );
+      end
+      imgs{k} = imread( fullfiles{k} );
+    end
+    
+    images{j} = imgs;
     image_filenames{j} = cellfun( @fname, image_fullfiles{j}, 'un', 0 );
   end
 

@@ -108,9 +108,11 @@ panels.reward = uipanel( panels.interface ...
   , 'Title', 'Reward' ...
   , 'Position', [ .5, .66, .25, .33 ] ...
 );
-text_pos =  struct( 'x', 0,   'y', 0, 'w', .5 );
-field_pos = struct( 'x', .5,  'y', 0, 'w', .5 );
-text_field_creator( panels.reward, 'REWARDS', {}, text_pos, field_pos );
+
+handle_reward_popup();
+% text_pos =  struct( 'x', 0,   'y', 0, 'w', .5 );
+% field_pos = struct( 'x', .5,  'y', 0, 'w', .5 );
+% text_field_creator( panels.reward, 'REWARDS', {}, text_pos, field_pos );
 
 Y = Y + L;
 
@@ -150,7 +152,9 @@ panels.run = uipanel( F ...
 );
 
 funcs = { 'hard reset', 'clean-up' ...
-  , 'Joint Attention', 'Biased Attention', 'Attentional Capture', 'Gaze Following' };
+  , 'Joint Attention', 'Biased Attention', 'Attentional Capture' ...
+  , 'Gaze Following', 'Social Motivation' };
+
 w = .5;
 l = 1 / numel(funcs);
 x = 0;
@@ -209,19 +213,23 @@ function handle_button(source, event)
   switch ( func )
     case 'Biased Attention'
       hwwba.config.save( config );
-      hwwba.task.start( @hwwba.task.run_biased_attention, config);
+      hwwba.task.start( @hwwba.task.run_biased_attention, config );
       
     case 'Joint Attention'
       hwwba.config.save( config );
-      hwwba.task.start( @hwwba.task.run_joint_attention, config);
+      hwwba.task.start( @hwwba.task.run_joint_attention, config );
       
     case 'Attentional Capture'
       hwwba.config.save( config );
-      hwwba.task.start( @hwwba.task.run_attentional_capture, config);
+      hwwba.task.start( @hwwba.task.run_attentional_capture, config );
       
     case 'Gaze Following'
       hwwba.config.save( config );
-      hwwba.task.start( @hwwba.task.run_gaze_following, config);
+      hwwba.task.start( @hwwba.task.run_gaze_following, config );
+      
+    case 'Social Motivation'
+      hwwba.config.save( config );
+      hwwba.task.start( @hwwba.task.run_social_motivation, config );
       
     case 'clean-up'
       hwwba.config.save( config );
@@ -262,6 +270,73 @@ function handle_textfields(source, event)
     eval( sprintf( '%s = ''%s'';', identifier, val ) );  
   end
   hwwba.config.save( config );
+end
+
+% - REWARDS - %
+
+function handle_reward_popup(source, event)
+  persistent reward_type;
+  
+  w_ = 0.5;
+  l_ = 0.5;
+  x_ = 0;
+  y_ = 0;
+  
+  position_ = [ x_, y_, w_, l_ ];
+  
+  rewards = config.REWARDS;
+  strs = fieldnames( rewards );
+  
+  if ( numel(strs) == 0 )
+    warning( 'No rewards given. Skipping rewards construction.' );
+    return;
+  end
+  
+  if ( isempty(reward_type) )
+    reward_type = strs{1};
+  end
+  
+  idx = find( strcmp(strs, reward_type) );
+  
+  uicontrol( panels.reward ...
+    , 'Style',  'edit' ...
+    , 'String',  rewards.(strs{idx}) ...
+    , 'Units',  'normalized' ...
+    , 'Position', position_ ...
+    , 'Callback', @handle_reward_edit ...
+  );
+
+  position_ = [ x_+w_, y_, w_, l_ ];
+  uicontrol( panels.reward ...
+    , 'Style',      'popup' ...
+    , 'String',     strs ...
+    , 'Value',      idx ...
+    , 'Units',      'normalized' ...
+    , 'Tag',        'reward_selector' ...
+    , 'Position',   position_ ...
+    , 'Callback',   @handle_reward_select ...
+  );
+
+  function handle_reward_select(source, event)
+    reward_type = source.String{source.Value};
+    handle_reward_popup();
+  end
+
+  function handle_reward_edit(source, event)    
+    try
+      new_time = str2double( source.String );
+      
+      assert( ~isempty(new_time), 'Time cannot be empty.' );
+      assert( ~isnan(new_time), 'Invalid time value; cannot be NaN.' );
+    catch err
+      warning( err.message );
+      return;
+    end 
+    
+    config.REWARDS.(reward_type) = new_time;
+    
+    hwwba.config.save( config );
+  end
 end
 
 % - TIME IN - %

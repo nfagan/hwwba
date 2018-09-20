@@ -11,6 +11,7 @@ TIMER =       opts.TIMER;
 STIMULI =     opts.STIMULI;
 TRACKER =     opts.TRACKER;
 WINDOW =      opts.WINDOW;
+comm =        opts.SERIAL.comm;
 
 %   begin in this state
 cstate = 'new_trial';
@@ -19,6 +20,10 @@ first_entry = true;
 DATA = struct();
 events = struct();
 errors = struct();
+
+image_categories = { 'fear', 'neutral', 'threat' };
+image_directness = { 'direct', 'indirect' };
+image_directions = { 'left', 'right' };
 
 TRIAL_NUMBER = 0;
 
@@ -51,7 +56,11 @@ while ( true )
     no_errors = ~any( structfun(@(x) x, errors) );
     
     if ( no_errors )
-      configure_images( STIMULI.ba_image1, STIMULI.ba_image2, STIMULI.setup.image_info.ba );
+      im1 = STIMULI.ba_image1;
+      im2 = STIMULI.ba_image2;
+      im_info = STIMULI.setup.image_info.ba;
+      [name1, name2] = configure_images( im1, im2, im_info ...
+        , image_categories, image_directness, image_directions );
     end
     
     if ( TRIAL_NUMBER > 0 )
@@ -81,8 +90,12 @@ while ( true )
       acquired_target = false;
       looked_to_target = false;
       drew_stimulus = false;
+      
       errors.broke_fixation = false;
       errors.fixation_not_met = false;
+      
+      events.(cstate) = TIMER.get_time( 'task' );
+      
       first_entry = false;
     end
 
@@ -127,6 +140,8 @@ while ( true )
       
       image_stims = { STIMULI.ba_image1, STIMULI.ba_image2 };
       
+      events.(cstate) = TIMER.get_time( 'task' );
+      
       cellfun( @(x) x.reset_targets(), image_stims );
       drew_stimulus = false;
       first_entry = false;
@@ -135,7 +150,7 @@ while ( true )
     if ( ~drew_stimulus )
       cellfun( @(x) x.draw(), image_stims );
       Screen( 'flip', WINDOW.index );
-      events.images_on = TIMER.get_time( 'task' );
+      events.ba_images_on = TIMER.get_time( 'task' );
       drew_stimulus = true;
     end
     
@@ -150,7 +165,10 @@ while ( true )
     if ( first_entry )
       LOG_DEBUG(['Entered ', cstate], 'entry');
       Screen( 'flip', WINDOW.index );
-      events.reward_on = TIMER.get_time( 'task' );
+      events.ba_reward_on = TIMER.get_time( 'task' );
+      
+      comm.reward( 1, opts.REWARDS.ba_main );
+      
       first_entry = false;
     end
     
@@ -195,7 +213,15 @@ TRACKER.shutdown();
 
 end
 
-function configure_images(img1, img2, image_info)
+function [name1, name2] = configure_images(img1, img2, image_info ...
+  , image_categories, image_directness, image_direction)
+
+img_cat = image_categories{ randi(numel(image_categories)) };
+img_directness = image_directness{ randi(numel(image_directness)) };
+img_dir = image_direction{ randi(numel(image_direction)) };
+
+name1 = '';
+name2 = '';
 
 images = image_info(:, end);
 

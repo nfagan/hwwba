@@ -11,6 +11,7 @@ TIMER =       opts.TIMER;
 STIMULI =     opts.STIMULI;
 TRACKER =     opts.TRACKER;
 WINDOW =      opts.WINDOW;
+comm =        opts.SERIAL.comm;
 
 %   begin in this state
 cstate = 'new_trial';
@@ -20,7 +21,11 @@ DATA = struct();
 events = struct();
 errors = struct();
 
+image_info = STIMULI.setup.image_info.ac;
+image_types = unique( image_info(:, 1) );
+
 TRIAL_NUMBER = 0;
+TRIAL_IN_BLOCK = 1;
 
 TIMER.add_timer( 'task', Inf );
 
@@ -50,18 +55,33 @@ while ( true )
   if ( strcmp(cstate, 'new_trial') )
     LOG_DEBUG(['Entered ', cstate]);
     
-    no_errors = ~any( structfun(@(x) x, errors) );
-    
-    if ( no_errors )
-      configure_images( STIMULI.ac_image1, STIMULI.setup.image_info.ac );
-    end
-    
     if ( TRIAL_NUMBER > 0 )
       tn = TRIAL_NUMBER;
       
       DATA(tn).events = events;
       DATA(tn).errors = errors;
+      DATA(tn).image_type = image_type;
+      DATA(tn).image_file = image_file;
     end
+    
+    no_errors = ~any( structfun(@(x) x, errors) );
+    
+    if ( no_errors )
+      image_type = image_types{TRIAL_IN_BLOCK};
+      image_file = configure_images( STIMULI.ac_image1, image_info, image_type );
+    
+      TRIAL_IN_BLOCK = TRIAL_IN_BLOCK + 1;
+
+      if ( TRIAL_IN_BLOCK > numel(image_types) )
+        TRIAL_IN_BLOCK = 1;
+        image_types = image_types( randperm(numel(image_types)) );
+      end
+    end
+    
+    LOG_DEBUG( sprintf('image type: %s', image_type), 'param' );
+    LOG_DEBUG( sprintf('image file: %s', image_file), 'param' );
+    
+    STIMULI.ac_image1.put( 'center' );
     
     events = structfun( @(x) nan, events, 'un', 0 );
     errors = structfun( @(x) false, errors, 'un', 0 );
@@ -83,8 +103,12 @@ while ( true )
       acquired_target = false;
       looked_to_target = false;
       drew_stimulus = false;
+      
       errors.broke_fixation = false;
       errors.fixation_not_met = false;
+      
+      events.(cstate) = TIMER.get_time( 'task' );
+      
       first_entry = false;
     end
 
@@ -93,7 +117,7 @@ while ( true )
     if ( ~drew_stimulus )
       fix_square.draw();
       Screen( 'flip', WINDOW.index );
-      events.fixation_onset = TIMER.get_time( 'task' );
+      events.ac_fixation_onset = TIMER.get_time( 'task' );
       drew_stimulus = true;
     end
     
@@ -107,7 +131,7 @@ while ( true )
     end
 
     if ( fix_square.duration_met() )
-      events.fixation_acquired = TIMER.get_time( 'task' );
+      events.ac_fixation_acquired = TIMER.get_time( 'task' );
       acquired_target = true;
       cstate = 'ac_present_images';
       first_entry = true;
@@ -127,22 +151,41 @@ while ( true )
       Screen( 'flip', WINDOW.index );
       TIMER.reset_timers( cstate );
       
-      image_stims = { STIMULI.ac_image1, STIMULI.ac_response1 };
+      events.(cstate) = TIMER.get_time( 'task' );
+      
+      response_stim = STIMULI.ac_response1;
+      image_stims = { STIMULI.ac_image1, response_stim };
       
       cellfun( @(x) x.reset_targets(), image_stims );
       drew_stimulus = false;
+      looked_to_target = false;
       first_entry = false;
     end
     
     if ( ~drew_stimulus )
       cellfun( @(x) x.draw(), image_stims );
       Screen( 'flip', WINDOW.index );
-      events.images_on = TIMER.get_time( 'task' );
+      events.ac_images_on = TIMER.get_time( 'task' );
       drew_stimulus = true;
     end
     
-    if ( TIMER.duration_met(cstate) )
+    if ( response_stim.in_bounds() )
+      looked_to_target = true;
+    elseif ( looked_to_target )
+      cstate = 'ac_response_error';
+      errors.broke_target_fixation = true;
+      first_entry = true;
+      continue;
+    end
+    
+    if ( response_stim.duration_met() )
       cstate = 'ac_reward';
+      first_entry = true;
+      continue;
+    end
+    
+    if ( TIMER.duration_met(cstate) && ~looked_to_target )
+      cstate = 'ac_response_error';
       first_entry = true;
     end
   end
@@ -151,7 +194,28 @@ while ( true )
   if ( strcmp(cstate, 'ac_reward') )
     if ( first_entry )
       LOG_DEBUG(['Entered ', cstate]);
-      events.reward_on = TIMER.get_time( 'task' );
+      events.ac_reward_on = TIMER.get_time( 'task' );
+      TIMER.reset_timers( cstate );
+      
+      comm.reward( 1, opts.REWARDS.ac_main );
+            
+      Screen( 'flip', WINDOW.index );
+      first_entry = false;
+    end
+    
+    if ( TIMER.duration_met(cstate) )
+      cstate = 'new_trial';
+      first_entry = true;
+    end
+  end
+  
+  %   STATE ac_response_error
+  if ( strcmp(cstate, 'ac_response_error') )
+    if ( first_entry )
+      LOG_DEBUG(['Entered ', cstate]);
+      events.(cstate) = TIMER.get_time( 'task' );
+      TIMER.reset_timers( cstate );
+            
       Screen( 'flip', WINDOW.index );
       first_entry = false;
     end
@@ -177,23 +241,50 @@ end
 
 TRACKER.shutdown();
 
-function LOG_DEBUG(msg)
-  if ( opts.INTERFACE.is_debug )
+function LOG_DEBUG(msg, tag)
+  if ( ~opts.INTERFACE.is_debug )
+    return;
+  end
+  
+  if ( nargin < 2 )
+    should_display = true;
+  else
+    tags = opts.INTERFACE.debug_tags;
+    is_all = numel(tags) == 1 && strcmp( tags, 'all' );
+    should_display =  is_all || ismember( tag, tags );
+  end
+  
+  if ( should_display )
     fprintf( '\n%s', msg );
   end
 end
 
 end
 
-function configure_images(img1, image_info)
+function file = configure_images(img1, image_info, image_type)
+
+file = '';
 
 images = image_info(:, end);
+image_files = image_info(:, end-1);
 
-if ( isa(img1, 'Image') )
-  img1.image = images{1}{1};
-else
+if ( ~isa(img1, 'Image') )
   disp( 'WARN: Image 1 is not an image.' );
+  return
 end
+
+image_types = image_info(:, 1);
+
+ind = strcmp( image_types, image_type );
+
+assert( sum(ind) > 0, 'No image types matched "%s".', image_type );
+
+ind = find( ind );
+use_ind = ind( randi(numel(ind)) );
+
+img1.image = images{use_ind}{1};
+
+file = image_files{use_ind}{1};
 
 end
 	
