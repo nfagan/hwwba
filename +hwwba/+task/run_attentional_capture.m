@@ -52,9 +52,7 @@ while ( true )
   structfun( @(x) x.update_targets(), stim_handles );
 
   %   STATE new_trial
-  if ( strcmp(cstate, 'new_trial') )
-    LOG_DEBUG(['Entered ', cstate]);
-    
+  if ( strcmp(cstate, 'new_trial') )    
     if ( TRIAL_NUMBER > 0 )
       tn = TRIAL_NUMBER;
       
@@ -62,6 +60,7 @@ while ( true )
       DATA(tn).errors = errors;
       DATA(tn).image_type = image_type;
       DATA(tn).image_file = image_file;
+      DATA(tn).target_placement = target_placement;
     end
     
     no_errors = ~any( structfun(@(x) x, errors) );
@@ -75,6 +74,12 @@ while ( true )
       if ( TRIAL_IN_BLOCK > numel(image_types) )
         TRIAL_IN_BLOCK = 1;
         image_types = image_types( randperm(numel(image_types)) );
+      end
+      
+      if ( rand() > 0.5 )
+        target_placement = 'center-left';
+      else
+        target_placement = 'center-right';
       end
     end
     
@@ -155,6 +160,8 @@ while ( true )
       
       response_stim = STIMULI.ac_response1;
       image_stims = { STIMULI.ac_image1, response_stim };
+      
+      response_stim.put( target_placement );
       
       cellfun( @(x) x.reset_targets(), image_stims );
       drew_stimulus = false;

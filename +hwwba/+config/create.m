@@ -59,22 +59,25 @@ TIMINGS = struct();
 
 % ba
 time_in = struct();
-time_in.new_trial = 0;
+time_in.ba_task = Inf;
 time_in.ba_fixation = 1;
 time_in.ba_present_images = 1;
 time_in.ba_reward = 0;
 % ja
+time_in.ja_task = Inf;
 time_in.ja_fixation = 1;
 time_in.ja_present_image = 1;
 time_in.ja_response = 1;
 time_in.ja_reward = 0;
 time_in.ja_response_error = 1;
 % ac
+time_in.ac_task = Inf;
 time_in.ac_fixation = 1;
 time_in.ac_present_images = 1;
 time_in.ac_reward = 0;
 time_in.ac_response_error = 0;
 % gf
+time_in.gf_task = Inf;
 time_in.gf_fixation = 1;
 time_in.gf_present_image = 1;
 time_in.gf_pre_target_delay = 1;
@@ -82,6 +85,7 @@ time_in.gf_response = 1;
 time_in.gf_reward = 1;
 time_in.gf_target_error = 1;
 % sm
+time_in.sm_task = Inf;
 time_in.sm_fixation = 1;
 time_in.sm_present_cue = 1;
 time_in.sm_present_image = 1;

@@ -23,29 +23,35 @@ errors = struct();
 
 image_categories = { 'fear', 'neutral', 'threat' };
 image_directness = { 'direct', 'indirect' };
-image_directions = { 'left', 'right' };
+image_conditions = get_image_condition_matrix( image_categories, image_directness );
+
+block_info.index = size( image_conditions, 1 ) + 1;
+block_info.condition_indices = [];
 
 TRIAL_NUMBER = 0;
-
-TIMER.add_timer( 'task', Inf );
 
 tracker_sync = struct();
 tracker_sync.timer = NaN;
 tracker_sync.interval = 1;
+tracker_sync.times = [];
+tracker_sync.index = 1;
 
 stim_handles = rmfield( STIMULI, 'setup' );
 
-while ( true )
+% reset task timer
+TIMER.reset_timers( 'ba_task' );
 
-  [key_pressed, ~, key_code] = KbCheck();
+task_timer_id = TIMER.get_underlying_id( 'ba_task' );
+task_time_limit = opts.TIMINGS.time_in.ba_task;
+stop_key = INTERFACE.stop_key;
 
-  if ( key_pressed )
-    if ( key_code(INTERFACE.stop_key) ), break; end
-  end
+while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key) )
   
   if ( isnan(tracker_sync.timer) || toc(tracker_sync.timer) >= tracker_sync.interval )
     TRACKER.send( 'RESYNCH' );
     tracker_sync.timer = tic();
+    tracker_sync.times(tracker_sync.index) = TIMER.get_time( 'ba_task' );
+    tracker_sync.index = tracker_sync.index + 1;
   end
 
   TRACKER.update_coordinates();
@@ -55,19 +61,42 @@ while ( true )
   if ( strcmp(cstate, 'new_trial') )
     no_errors = ~any( structfun(@(x) x, errors) );
     
-    if ( no_errors )
-      im1 = STIMULI.ba_image1;
-      im2 = STIMULI.ba_image2;
-      im_info = STIMULI.setup.image_info.ba;
-      [name1, name2] = configure_images( im1, im2, im_info ...
-        , image_categories, image_directness, image_directions );
-    end
-    
     if ( TRIAL_NUMBER > 0 )
       tn = TRIAL_NUMBER;
       
       DATA(tn).events = events;
       DATA(tn).errors = errors;
+      DATA(tn).left_image_category = left_image_category;
+      DATA(tn).right_image_category = right_image_category;
+      DATA(tn).left_image_filename = left_image_filename;
+      DATA(tn).right_image_filename = right_image_filename;
+      DATA(tn).directness = current_directness;
+    end
+    
+    if ( no_errors )
+      im1 = STIMULI.ba_image1;
+      im2 = STIMULI.ba_image2;
+      im_info = STIMULI.setup.image_info.ba;
+      
+      if ( block_info.index > size(image_conditions, 1) )
+        block_info.index = 1;
+        block_info.condition_indices = randperm( size(image_conditions, 1) );
+      end
+      
+      condition_index = block_info.condition_indices(block_info.index);
+      
+      left_image_category = image_conditions{condition_index, 1};
+      right_image_category = image_conditions{condition_index, 2};  
+      current_directness = image_conditions{condition_index, 3};
+      
+      [left_image_filename, right_image_filename] = configure_images( im1, im2, im_info ...
+        , left_image_category, right_image_category, current_directness );
+      
+      block_info.index = block_info.index + 1;
+      
+      LOG_DEBUG( sprintf('left-image-category:  %s', left_image_category), 'param' );
+      LOG_DEBUG( sprintf('right-image-category: %s', right_image_category), 'param' );
+      LOG_DEBUG( sprintf('directness:           %s', current_directness), 'param' );
     end
     
     events = structfun( @(x) nan, events, 'un', 0 );
@@ -94,7 +123,7 @@ while ( true )
       errors.broke_fixation = false;
       errors.fixation_not_met = false;
       
-      events.(cstate) = TIMER.get_time( 'task' );
+      events.(cstate) = TIMER.get_time( 'ba_task' );
       
       first_entry = false;
     end
@@ -104,7 +133,7 @@ while ( true )
     if ( ~drew_stimulus )
       fix_square.draw();
       Screen( 'flip', WINDOW.index );
-      events.fixation_onset = TIMER.get_time( 'task' );
+      events.fixation_onset = TIMER.get_time( 'ba_task' );
       drew_stimulus = true;
     end
     
@@ -118,7 +147,7 @@ while ( true )
     end
 
     if ( fix_square.duration_met() )
-      events.fixation_acquired = TIMER.get_time( 'task' );
+      events.fixation_acquired = TIMER.get_time( 'ba_task' );
       acquired_target = true;
       cstate = 'ba_present_images';
       first_entry = true;
@@ -140,7 +169,7 @@ while ( true )
       
       image_stims = { STIMULI.ba_image1, STIMULI.ba_image2 };
       
-      events.(cstate) = TIMER.get_time( 'task' );
+      events.(cstate) = TIMER.get_time( 'ba_task' );
       
       cellfun( @(x) x.reset_targets(), image_stims );
       drew_stimulus = false;
@@ -150,7 +179,7 @@ while ( true )
     if ( ~drew_stimulus )
       cellfun( @(x) x.draw(), image_stims );
       Screen( 'flip', WINDOW.index );
-      events.ba_images_on = TIMER.get_time( 'task' );
+      events.ba_images_on = TIMER.get_time( 'ba_task' );
       drew_stimulus = true;
     end
     
@@ -165,7 +194,7 @@ while ( true )
     if ( first_entry )
       LOG_DEBUG(['Entered ', cstate], 'entry');
       Screen( 'flip', WINDOW.index );
-      events.ba_reward_on = TIMER.get_time( 'task' );
+      events.ba_reward_on = TIMER.get_time( 'ba_task' );
       
       comm.reward( 1, opts.REWARDS.ba_main );
       
@@ -206,36 +235,92 @@ if ( opts.INTERFACE.save_data )
   
   edf_file = TRACKER.edf;
   
-  save( fullfile(save_p, fname), 'DATA', 'opts', 'edf_file' );
+  save( fullfile(save_p, fname), 'DATA', 'opts', 'edf_file', 'tracker_sync' );
 end
 
 TRACKER.shutdown();
 
 end
 
-function [name1, name2] = configure_images(img1, img2, image_info ...
-  , image_categories, image_directness, image_direction)
+function c = get_image_condition_matrix(categories, gaze_types)
 
-img_cat = image_categories{ randi(numel(image_categories)) };
-img_directness = image_directness{ randi(numel(image_directness)) };
-img_dir = image_direction{ randi(numel(image_direction)) };
+inds = combvec( 1:numel(categories), 1:numel(categories) ...
+  , 1:numel(gaze_types) );
+
+n_combs = size( inds, 2 );
+c = {};
+stp = 1;
+
+for i = 1:n_combs
+  cond = inds(:, i);
+  
+  left_category = categories(cond(1));
+  right_category = categories(cond(2));
+  gaze_type = gaze_types(cond(3));
+  
+  is_same_cat = strcmp( left_category, right_category );
+  
+  if ( is_same_cat ), continue; end
+  
+  c(stp, 1) = left_category;
+  c(stp, 2) = right_category;
+  c(stp, 3) = gaze_type;
+  
+  stp = stp + 1;
+end
+
+end
+
+function [name1, name2] = configure_images(left_image, right_image, image_info ...
+  , left_image_category, right_image_category, directness)
 
 name1 = '';
 name2 = '';
 
 images = image_info(:, end);
+image_filenames = image_info(:, end-1);
+image_ids = image_info(:, 1);
 
-if ( isa(img1, 'Image') )
-  img1.image = images{1}{1};
+if ( strcmp(directness, 'direct') )
+  left_image_id = sprintf( '%s-direct', left_image_category );
+  right_image_id = sprintf( '%s-direct', right_image_category );
+else
+  left_image_id = sprintf( '%s-indirect-left', left_image_category );
+  right_image_id = sprintf( '%s-indirect-right', right_image_category );
+end
+
+if ( isa(left_image, 'Image') )
+  [mat, name] = get_image( left_image_id );
+  left_image.image = mat;
+  name1 = name;
 else
   disp( 'WARN: Image 1 is not an image.' );
 end
 
-if ( isa(img2, 'Image') )
-  img2.image = images{1}{1};
+if ( isa(right_image, 'Image') )
+  [mat, name] = get_image( right_image_id );
+  right_image.image = mat;
+  name2 = name;
 else
   disp( 'WARN: Image 2 is not an image.' );
 end
+
+  function [mat, name] = get_image(image_id)
+    image_ind = find( strcmp(image_ids, image_id) );
+  
+    assert( numel(image_ind) == 1, 'No images or more than one image matched "%s".' ...
+      , image_id );
+
+    images_this_id = images{image_ind};
+    filenames_this_id = image_filenames{image_ind};
+    
+    assert( numel(images_this_id) == numel(filenames_this_id) );
+    
+    use_image_ind = randi( numel(images_this_id) );
+    
+    mat = images_this_id{use_image_ind};
+    name = filenames_this_id{use_image_ind};
+  end
 
 end
 	

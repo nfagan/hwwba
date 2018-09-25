@@ -53,7 +53,17 @@ while ( true )
     no_errors = ~any( structfun(@(x) x, errors) );
     
     if ( no_errors )
-      configure_images( STIMULI.ja_image1, STIMULI.setup.image_info.ja );
+      if ( rand() > 0.5 )
+        current_look_direction = 'left';
+      else
+        current_look_direction = 'right';
+      end
+      
+      img = STIMULI.ja_image1;
+      img_info = STIMULI.setup.image_info.ja;
+      image_filename = configure_images( img, img_info, current_look_direction );
+      
+      LOG_DEBUG( sprintf('Look direction: %s', current_look_direction), 'param' );
     end
     
     if ( TRIAL_NUMBER > 0 )
@@ -62,6 +72,8 @@ while ( true )
       DATA(tn).events = events;
       DATA(tn).errors = errors;
       DATA(tn).response_direction = ja_response_direction;
+      DATA(tn).image_look_direction = current_look_direction;
+      DATA(tn).image_filename = image_filename;
     end
     
     events = structfun( @(x) nan, events, 'un', 0 );
@@ -276,15 +288,30 @@ end
 
 end
 
-function configure_images(img1, image_info)
+function name = configure_images(img1, image_info, look_direction)
+
+name = '';
 
 images = image_info(:, end);
+directions = image_info(:, 1);
+filenames = image_info(:, end-1);
 
-if ( isa(img1, 'Image') )
-  img1.image = images{1}{1};
-else
+if ( ~isa(img1, 'Image') )
   disp( 'WARN: Image 1 is not an image.' );
+  return  
 end
+
+dir_ind = strcmp( directions, look_direction );
+
+assert( sum(dir_ind) == 1, 'More or fewer than 1 direction matched "%s".', look_direction );
+
+matching_images = images{dir_ind};
+matching_files = filenames{dir_ind};
+
+img_ind = randi( numel(matching_files) );
+
+img1.image = matching_images{img_ind};
+name = matching_files{img_ind};
 
 end
 	
