@@ -70,9 +70,20 @@ for i = 1:numel(stim_fs)
     case 'Rectangle'
       stim_ = Rectangle( windex, wrect, stim.size );
     case 'Image'
-      im = stim.image_matrix;
+      if ( isfield(stim, 'image_file') )
+        load_p = fullfile( opts.PATHS.stimuli, stim.image_file );
+        try
+          im = imread( load_p );
+        catch err
+          warning( err.message );
+          im = [];
+        end
+      else
+        im = stim.image_matrix;
+      end
       stim_ = Image( windex, wrect, stim.size, im );
   end
+  
   stim_.color = stim.color;
   stim_.put( stim.placement );
   

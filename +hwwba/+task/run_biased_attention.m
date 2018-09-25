@@ -14,7 +14,7 @@ WINDOW =      opts.WINDOW;
 comm =        opts.SERIAL.comm;
 
 %   begin in this state
-cstate = 'new_trial';
+cstate = 'ba_task_identity';
 first_entry = true;
 
 DATA = struct();
@@ -56,9 +56,33 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
 
   TRACKER.update_coordinates();
   structfun( @(x) x.update_targets(), stim_handles );
+  
+  %   STATE task_identity  
+  if ( strcmp(cstate, 'ba_task_identity') )
+    if ( first_entry )
+      TIMER.reset_timers( cstate );
+      drew_identity_cue = false;
+      first_entry = false;
+    end
+    
+    if ( ~drew_identity_cue )
+      cue = STIMULI.ba_task_identity_cue;
+      cue.put( 'center' );
+      cue.draw()
+      Screen( 'flip', opts.WINDOW.index );
+      drew_identity_cue = true;
+    end
+    
+    if ( TIMER.duration_met(cstate) )
+      cstate = 'new_trial';
+      first_entry = true;
+    end
+  end
 
   %   STATE new_trial
   if ( strcmp(cstate, 'new_trial') )
+    Screen( 'FillRect', opts.WINDOW.index, [0, 0, 0], Screen('Rect', opts.WINDOW.index) );
+    
     no_errors = ~any( structfun(@(x) x, errors) );
     
     if ( TRIAL_NUMBER > 0 )
@@ -131,6 +155,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     fix_square.update_targets();
 
     if ( ~drew_stimulus )
+      fix_square.color = STIMULI.ba_task_identity_cue.color;
       fix_square.draw();
       Screen( 'flip', WINDOW.index );
       events.fixation_onset = TIMER.get_time( 'ba_task' );

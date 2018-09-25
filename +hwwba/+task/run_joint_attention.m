@@ -13,7 +13,7 @@ TRACKER =     opts.TRACKER;
 WINDOW =      opts.WINDOW;
 
 %   begin in this state
-cstate = 'new_trial';
+cstate = 'ja_task_identity';
 first_entry = true;
 
 DATA = struct();
@@ -45,26 +45,48 @@ while ( true )
 
   TRACKER.update_coordinates();
   structfun( @(x) x.update_targets(), stim_handles );
+  
+  %   STATE task_identity  
+  if ( strcmp(cstate, 'ja_task_identity') )
+    if ( first_entry )
+      TIMER.reset_timers( cstate );
+      drew_identity_cue = false;
+      first_entry = false;
+    end
+    
+    if ( ~drew_identity_cue )
+      cue = STIMULI.ja_task_identity_cue;
+      cue.put( 'center' );
+      cue.draw()
+      Screen( 'flip', opts.WINDOW.index );
+      drew_identity_cue = true;
+    end
+    
+    if ( TIMER.duration_met(cstate) )
+      cstate = 'new_trial';
+      first_entry = true;
+    end
+  end
 
   %   STATE new_trial
   if ( strcmp(cstate, 'new_trial') )
+    Screen( 'FillRect', opts.WINDOW.index, [0, 0, 0], Screen('Rect', opts.WINDOW.index) );
+    
     LOG_DEBUG(['Entered ', cstate], 'entry');
     
     no_errors = ~any( structfun(@(x) x, errors) );
     
-    if ( no_errors )
-      if ( rand() > 0.5 )
-        current_look_direction = 'left';
-      else
-        current_look_direction = 'right';
-      end
-      
-      img = STIMULI.ja_image1;
-      img_info = STIMULI.setup.image_info.ja;
-      image_filename = configure_images( img, img_info, current_look_direction );
-      
-      LOG_DEBUG( sprintf('Look direction: %s', current_look_direction), 'param' );
+    if ( rand() > 0.5 )
+      current_look_direction = 'left';
+    else
+      current_look_direction = 'right';
     end
+
+    img = STIMULI.ja_image1;
+    img_info = STIMULI.setup.image_info.ja;
+    image_filename = configure_images( img, img_info, current_look_direction );
+
+    LOG_DEBUG( sprintf('Look direction: %s', current_look_direction), 'param' );
     
     if ( TRIAL_NUMBER > 0 )
       tn = TRIAL_NUMBER;
@@ -105,6 +127,7 @@ while ( true )
     fix_square.update_targets();
 
     if ( ~drew_stimulus )
+      fix_square.color = STIMULI.ja_task_identity_cue.color;
       fix_square.draw();
       Screen( 'flip', WINDOW.index );
       events.fixation_onset = TIMER.get_time( 'task' );
@@ -123,7 +146,7 @@ while ( true )
     if ( fix_square.duration_met() )
       events.fixation_acquired = TIMER.get_time( 'task' );
       acquired_target = true;
-      cstate = 'ja_present_image';
+      cstate = 'ja_response';
       first_entry = true;
     end
 
@@ -168,7 +191,7 @@ while ( true )
       Screen( 'flip', WINDOW.index );
       TIMER.reset_timers( cstate );
       
-      stims = { STIMULI.ja_response1, STIMULI.ja_response2 };
+      stims = { STIMULI.ja_response1, STIMULI.ja_response2, STIMULI.ja_image1 };
       
       ja_response_direction = '';
       looked_to = '';
@@ -209,7 +232,14 @@ while ( true )
     
     if ( ~isempty(ja_response_direction) )
       LOG_DEBUG( ['Chose: ', ja_response_direction], 'response' );
-      cstate = 'ja_reward';
+      
+      if ( ~isempty(strfind(ja_response_direction, current_look_direction)) )
+        cstate = 'ja_reward';
+        errors.incorrect_look_direction = true;
+      else
+        cstate = 'ja_response_error';
+      end
+      
       first_entry = true;
       continue;
     end

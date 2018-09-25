@@ -15,7 +15,7 @@ TIMINGS =     opts.TIMINGS;
 comm =        opts.SERIAL.comm;
 
 %   begin in this state
-cstate = 'new_trial';
+cstate = 'sm_task_identity';
 first_entry = true;
 
 DATA = struct();
@@ -47,10 +47,34 @@ while ( true )
 
   TRACKER.update_coordinates();
   structfun( @(x) x.update_targets(), stim_handles );
+  
+  %   STATE task_identity  
+  if ( strcmp(cstate, 'sm_task_identity') )
+    if ( first_entry )
+      TIMER.reset_timers( cstate );
+      drew_identity_cue = false;
+      first_entry = false;
+    end
+    
+    if ( ~drew_identity_cue )
+      cue = STIMULI.sm_task_identity_cue;
+      cue.put( 'center' );
+      cue.draw()
+      Screen( 'flip', opts.WINDOW.index );
+      drew_identity_cue = true;
+    end
+    
+    if ( TIMER.duration_met(cstate) )
+      cstate = 'new_trial';
+      first_entry = true;
+    end
+  end
 
   %   STATE new_trial
   if ( strcmp(cstate, 'new_trial') )
     LOG_DEBUG(['Entered ', cstate], 'entry');
+    
+    Screen( 'FillRect', opts.WINDOW.index, [0, 0, 0], Screen('Rect', opts.WINDOW.index) );
     
     if ( TRIAL_NUMBER > 0 )
       tn = TRIAL_NUMBER;
@@ -90,7 +114,7 @@ while ( true )
     
     TRIAL_NUMBER = TRIAL_NUMBER + 1;
     
-    cstate = 'sm_fixation';
+    cstate = 'sm_present_cue';
     first_entry = true;
   end
 
@@ -117,6 +141,7 @@ while ( true )
     fix_square.update_targets();
 
     if ( ~drew_stimulus )
+      fix_square.color = STIMULI.sm_task_identity_cue.color;
       fix_square.draw();
       Screen( 'flip', WINDOW.index );
       events.fixation_onset = TIMER.get_time( 'task' );
