@@ -248,7 +248,7 @@ while ( true )
       errors.target_fixation_not_met = false;
       
       response_target = STIMULI.gf_response1;
-      image_stims = { STIMULI.gf_image1, response_target };
+      image_stims = { response_target };
       
       response_target.put( current_look_direction );
       
