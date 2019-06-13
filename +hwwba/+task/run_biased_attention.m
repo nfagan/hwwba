@@ -21,7 +21,7 @@ DATA = struct();
 events = struct();
 errors = struct();
 
-image_categories = { 'fear', 'neutral', 'threat' };
+image_categories = { 'fear', 'neutral', 'threat', 'lipsmack' };
 image_directness = { 'direct', 'indirect' };
 image_conditions = get_image_condition_matrix( image_categories, image_directness );
 

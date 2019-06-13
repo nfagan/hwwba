@@ -103,6 +103,17 @@ text_pos =  struct( 'x', 0, 'y',  0, 'w', .5 );
 field_pos = struct( 'x', .5, 'y', 0, 'w', .5 );
 text_field_creator( panels.serial, 'SERIAL', {}, text_pos, field_pos );
 
+% - STRUCTURE - %
+panels.structure = uipanel( panels.interface ...
+  , 'Title', 'Structure' ...
+  , 'Position', [ 0.75, 0.66, 0.25, 0.33 ] ...
+);
+
+structure_dropdown = shared_utils.gui.TextFieldDropdown();
+structure_dropdown.parent = panels.structure;
+structure_dropdown.on_change = @handle_structure_change;
+structure_dropdown.set_data( config.STRUCTURE );
+
 % - Rewards - %
 panels.reward = uipanel( panels.interface ...
   , 'Title', 'Reward' ...
@@ -113,6 +124,16 @@ handle_reward_popup();
 % text_pos =  struct( 'x', 0,   'y', 0, 'w', .5 );
 % field_pos = struct( 'x', .5,  'y', 0, 'w', .5 );
 % text_field_creator( panels.reward, 'REWARDS', {}, text_pos, field_pos );
+
+panels.task_order = uipanel( panels.interface ...
+  , 'Title', 'Task order' ...
+  , 'Position', [0.5, 0, 0.25, 0.33 ] ...
+);
+
+task_order_dropdown = shared_utils.gui.TextFieldDropdown();
+task_order_dropdown.parent = panels.task_order;
+task_order_dropdown.set_data( config.TASK_ORDER );
+task_order_dropdown.on_change = @handle_task_order_change;
 
 Y = Y + L;
 
@@ -153,7 +174,7 @@ panels.run = uipanel( F ...
 
 funcs = { 'hard reset', 'clean-up' ...
   , 'Joint Attention', 'Biased Attention', 'Attentional Capture' ...
-  , 'Gaze Following', 'Social Motivation' };
+  , 'Gaze Following', 'Social Motivation', 'Run all' };
 
 w = .5;
 l = 1 / numel(funcs);
@@ -196,6 +217,27 @@ set( F, 'visible', 'on' );
     EVENT HANDLERS
 %}
 
+  function handle_structure_change(old_data, new_data, target)
+    config.STRUCTURE = new_data;
+    hwwba.config.save( config );
+  end
+
+  function handle_task_order_change(old_data, new_data, target)
+    changed_data = new_data.(target);
+    try
+      validateattributes( changed_data, {'double'}, {'scalar', 'integer'} ...
+        , mfilename, target );
+    catch err
+      warning( err.message );
+      task_order_dropdown.set_data( old_data );
+      task_order_dropdown.Update();
+      return;
+    end
+    
+    config.TASK_ORDER = new_data;
+    hwwba.config.save( config );
+  end
+
 function handle_checkbox(source, event)
   
   %   HANDLE_CHECKBOX -- Handle checkbox clicks.
@@ -211,6 +253,10 @@ function handle_button(source, event)
   
   func = source.String;
   switch ( func )
+    case 'Run all'
+      hwwba.config.save( config );
+      run_tasks_consecutively( config );
+    
     case 'Biased Attention'
       hwwba.config.save( config );
       hwwba.task.start( @hwwba.task.run_biased_attention, config );

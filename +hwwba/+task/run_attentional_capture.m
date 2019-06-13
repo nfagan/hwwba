@@ -35,7 +35,14 @@ tracker_sync.interval = 1;
 
 stim_handles = rmfield( STIMULI, 'setup' );
 
-while ( true )
+% reset task timer
+TIMER.reset_timers( 'ac_task' );
+
+task_timer_id = TIMER.get_underlying_id( 'ac_task' );
+task_time_limit = opts.TIMINGS.time_in.ac_task;
+stop_key = INTERFACE.stop_key;
+
+while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key) )
 
   [key_pressed, ~, key_code] = KbCheck();
 
@@ -102,8 +109,10 @@ while ( true )
       
       if ( rand() > 0.5 )
         target_placement = 'center-left';
+        target_x_shift = -abs( STIMULI.setup.ac_response1.shift(1) );
       else
         target_placement = 'center-right';
+        target_x_shift = abs( STIMULI.setup.ac_response1.shift(1) );
       end
     end
     
@@ -187,6 +196,7 @@ while ( true )
       image_stims = { STIMULI.ac_image1, response_stim };
       
       response_stim.put( target_placement );
+      response_stim.shift( target_x_shift, STIMULI.setup.ac_response1.shift(2) );
       
       cellfun( @(x) x.reset_targets(), image_stims );
       drew_stimulus = false;

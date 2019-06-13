@@ -12,6 +12,8 @@ STIMULI =     opts.STIMULI;
 TRACKER =     opts.TRACKER;
 WINDOW =      opts.WINDOW;
 TIMINGS =     opts.TIMINGS;
+STRUCTURE =   opts.STRUCTURE;
+comm =        opts.SERIAL.comm;
 
 %   begin in this state
 cstate = 'gf_task_identity';
@@ -21,7 +23,7 @@ DATA = struct();
 events = struct();
 errors = struct();
 
-P_CONSISTENT = 0.7;
+P_CONSISTENT = STRUCTURE.gf_p_consistent;
 BLOCK_SIZE = 10;
 
 consistent_types = get_trial_types( P_CONSISTENT, BLOCK_SIZE );
@@ -37,7 +39,14 @@ tracker_sync.interval = 1;
 
 stim_handles = rmfield( STIMULI, 'setup' );
 
-while ( true )
+% reset task timer
+TIMER.reset_timers( 'gf_task' );
+
+task_timer_id = TIMER.get_underlying_id( 'gf_task' );
+task_time_limit = opts.TIMINGS.time_in.gf_task;
+stop_key = INTERFACE.stop_key;
+
+while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key) )
 
   [key_pressed, ~, key_code] = KbCheck();
 
@@ -88,6 +97,7 @@ while ( true )
       DATA(tn).errors = errors;
       DATA(tn).delay = current_delay;
       DATA(tn).look_direction = current_look_direction;
+      DATA(tn).target_direction = current_target_direction;
       DATA(tn).trial_type = current_trial_type;
       DATA(tn).image_file = current_image_file;
     end
@@ -111,8 +121,21 @@ while ( true )
     
     if ( current_trial_type_logical )
       current_trial_type = 'consistent';
+      current_target_direction = current_look_direction;
     else
       current_trial_type = 'inconsistent';
+      
+      if ( strcmp(current_look_direction, 'center-left') )
+        current_target_direction = 'center-right';
+      else
+        current_target_direction = 'center-left';
+      end
+    end
+    
+    if ( strcmp(current_target_direction, 'center-left') )
+      current_response_targ_x_shift = -abs( opts.STIMULI.setup.gf_response1.shift(1) );
+    else
+      current_response_targ_x_shift = abs( opts.STIMULI.setup.gf_response1.shift(1) );
     end
     
     events = structfun( @(x) nan, events, 'un', 0 );
@@ -248,9 +271,11 @@ while ( true )
       errors.target_fixation_not_met = false;
       
       response_target = STIMULI.gf_response1;
+      response_target_y_shift = opts.STIMULI.setup.gf_response1.shift(2);
       image_stims = { response_target };
       
-      response_target.put( current_look_direction );
+      response_target.put( current_target_direction );
+      response_target.shift( current_response_targ_x_shift, response_target_y_shift );
       
       cellfun( @(x) x.reset_targets(), image_stims );
       drew_stimulus = false;
@@ -315,6 +340,7 @@ while ( true )
   if ( strcmp(cstate, 'gf_reward') )
     if ( first_entry )
       LOG_DEBUG(['Entered ', cstate], 'entry');
+      comm.reward( 1, opts.REWARDS.gf_main );
       TIMER.reset_timers( cstate );
       events.reward_on = TIMER.get_time( 'task' );
       Screen( 'flip', WINDOW.index );

@@ -11,6 +11,7 @@ TIMER =       opts.TIMER;
 STIMULI =     opts.STIMULI;
 TRACKER =     opts.TRACKER;
 WINDOW =      opts.WINDOW;
+comm =        opts.SERIAL.comm;
 
 %   begin in this state
 cstate = 'ja_task_identity';
@@ -30,7 +31,14 @@ tracker_sync.interval = 1;
 
 stim_handles = rmfield( STIMULI, 'setup' );
 
-while ( true )
+% reset task timer
+TIMER.reset_timers( 'ja_task' );
+
+task_timer_id = TIMER.get_underlying_id( 'ja_task' );
+task_time_limit = opts.TIMINGS.time_in.ja_task;
+stop_key = INTERFACE.stop_key;
+
+while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key) )
 
   [key_pressed, ~, key_code] = KbCheck();
 
@@ -191,6 +199,16 @@ while ( true )
       Screen( 'flip', WINDOW.index );
       TIMER.reset_timers( cstate );
       
+      ja_response1 = STIMULI.ja_response1;
+      left_shift = opts.STIMULI.setup.ja_response1.shift;
+      ja_response1.put( 'center-left' );
+      ja_response1.shift( left_shift(1), left_shift(2) );
+      
+      ja_response2 = STIMULI.ja_response2;
+      right_shift = opts.STIMULI.setup.ja_response2.shift;
+      ja_response2.put( 'center-right' );
+      ja_response2.shift( right_shift(1), right_shift(2) );
+      
       stims = { STIMULI.ja_response1, STIMULI.ja_response2, STIMULI.ja_image1 };
       
       ja_response_direction = '';
@@ -258,6 +276,9 @@ while ( true )
       events.reward_on = TIMER.get_time( 'task' );
       TIMER.reset_timers( cstate );
       Screen( 'flip', WINDOW.index );
+      
+      comm.reward( 1, opts.REWARDS.ja_main );
+      
       first_entry = false;
     end
     

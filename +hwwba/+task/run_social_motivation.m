@@ -32,7 +32,14 @@ tracker_sync.interval = 1;
 
 stim_handles = rmfield( STIMULI, 'setup' );
 
-while ( true )
+% reset task timer
+TIMER.reset_timers( 'sm_task' );
+
+task_timer_id = TIMER.get_underlying_id( 'sm_task' );
+task_time_limit = opts.TIMINGS.time_in.sm_task;
+stop_key = INTERFACE.stop_key;
+
+while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key) )
 
   [key_pressed, ~, key_code] = KbCheck();
 
