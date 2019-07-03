@@ -18,6 +18,9 @@ cstate = 'ac_task_identity';
 first_entry = true;
 
 DATA = struct();
+PERFORMANCE = struct();
+PERFORMANCE.by_image_type = containers.Map();
+
 events = struct();
 errors = struct();
 
@@ -92,6 +95,9 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       DATA(tn).image_type = image_type;
       DATA(tn).image_file = image_file;
       DATA(tn).target_placement = target_placement;
+      
+      clc;
+      print_performance( DATA(tn), PERFORMANCE, tn );
     end
     
     no_errors = ~any( structfun(@(x) x, errors) );
@@ -330,3 +336,13 @@ file = image_files{use_ind}{1};
 
 end
 	
+function print_performance(data, perf, total_trials)
+
+image_type = data.image_type;
+
+initiated_func = @(data) ~data.errors.broke_fixation && ~data.errors.fixation_not_met;
+
+hwwba.util.print_performance( data, perf.by_image_type, total_trials ...
+  , image_type, true, initiated_func );
+
+end

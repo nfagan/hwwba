@@ -20,6 +20,8 @@ cstate = 'gf_task_identity';
 first_entry = true;
 
 DATA = struct();
+PERFORMANCE = struct();
+PERFORMANCE.by_image_type = containers.Map();
 events = struct();
 errors = struct();
 
@@ -100,6 +102,9 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       DATA(tn).target_direction = current_target_direction;
       DATA(tn).trial_type = current_trial_type;
       DATA(tn).image_file = current_image_file;
+      
+      clc;
+      print_performance( DATA(tn), PERFORMANCE, tn );
     end
     
     no_errors = ~any( structfun(@(x) x, errors) );
@@ -423,6 +428,17 @@ img_ind = randi( numel(matching_imgs) );
 
 img1.image = matching_imgs{img_ind};
 name = matching_filenames{img_ind};
+
+end
+
+function print_performance(data, perf, total_trials)
+
+image_type = sprintf( '%s / %s', data.trial_type, data.look_direction );
+
+initiated_func = @(data) ~data.errors.broke_fixation;
+
+hwwba.util.print_performance( data, perf.by_image_type, total_trials ...
+  , image_type, true, initiated_func );
 
 end
 	
