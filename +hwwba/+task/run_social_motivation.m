@@ -19,6 +19,8 @@ cstate = 'sm_task_identity';
 first_entry = true;
 
 DATA = struct();
+PERFORMANCE = struct();
+PERFORMANCE.by_image_type = containers.Map();
 events = struct();
 errors = struct();
 
@@ -92,6 +94,9 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       DATA(tn).cue_delay = current_delay;
       DATA(tn).cue_name = cue_name;
       DATA(tn).cued_image_name = cued_image_name;
+      
+      clc;
+      print_performance( DATA(tn), PERFORMANCE, tn );
     end
     
     no_errors = ~any( structfun(@(x) x, errors) );
@@ -375,3 +380,16 @@ img.image = tt_imgs{tt_use};
 name = tt_names{tt_use};
 
 end
+
+function print_performance(data, perf, total_trials)
+
+by_image_type = perf.by_image_type;
+image_type = sprintf( '%s | %0.2f', data.trial_type, data.cue_delay );
+
+initiated_func = @(data) ~data.errors.broke_cue_fixation;
+
+hwwba.util.print_performance( data, by_image_type, total_trials ...
+  , image_type, true, initiated_func );
+
+end
+	

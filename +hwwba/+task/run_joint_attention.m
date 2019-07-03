@@ -19,6 +19,9 @@ cstate = 'ja_task_identity';
 first_entry = true;
 
 DATA = struct();
+PERFORMANCE = struct();
+PERFORMANCE.by_image_type = containers.Map();
+
 events = struct();
 errors = struct();
 
@@ -105,6 +108,8 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       DATA(tn).response_direction = ja_response_direction;
       DATA(tn).image_look_direction = current_look_direction;
       DATA(tn).image_filename = image_filename;
+      
+      print_performance( DATA(tn), PERFORMANCE, tn );
     end
     
     events = structfun( @(x) nan, events, 'un', 0 );
@@ -364,6 +369,17 @@ img_ind = randi( numel(matching_files) );
 
 img1.image = matching_images{img_ind};
 name = matching_files{img_ind};
+
+end
+
+function print_performance(data, perf, total_trials)
+
+image_type = data.image_look_direction;
+
+initiated_func = @(data) ~data.errors.broke_fixation && ~data.errors.fixation_not_met;
+
+hwwba.util.print_performance( data, perf.by_image_type, total_trials ...
+  , image_type, true, initiated_func );
 
 end
 	

@@ -18,6 +18,9 @@ cstate = 'ba_task_identity';
 first_entry = true;
 
 DATA = struct();
+PERFORMANCE = struct();
+PERFORMANCE.by_image_type = containers.Map();
+
 events = struct();
 errors = struct();
 
@@ -95,6 +98,9 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       DATA(tn).left_image_filename = left_image_filename;
       DATA(tn).right_image_filename = right_image_filename;
       DATA(tn).directness = current_directness;
+      
+      clc;
+      print_performance( DATA(tn), PERFORMANCE, tn );
     end
     
     if ( no_errors )
@@ -346,6 +352,53 @@ end
     mat = images_this_id{use_image_ind};
     name = filenames_this_id{use_image_ind};
   end
+
+end
+
+function print_performance(data, perf, total_trials)
+
+image_type = sprintf( '%s / %s: %s', data.left_image_category, data.right_image_category, data.directness );
+
+initiated_func = @(data) ~data.errors.broke_fixation;
+
+hwwba.util.print_performance( data, perf.by_image_type, total_trials ...
+  , image_type, false, initiated_func );
+
+% by_image_type = perf.by_image_type;
+% image_type = sprintf( '%s / %s: %s', data.left_image_category, data.right_image_category, data.directness );
+% 
+% if ( ~isKey(by_image_type, image_type) )
+%   curr = struct();
+%   curr.num_correct = 0;
+%   curr.num_initiated = 0;
+% else
+%   curr = by_image_type(image_type);
+% end
+% 
+% if ( ~any(structfun(@(x) x, data.errors)) )
+%   curr.num_correct = curr.num_correct + 1;
+% end
+% 
+% if ( ~data.errors.broke_fixation )
+%   curr.num_initiated = curr.num_initiated + 1;
+% end
+% 
+% by_image_type(image_type) = curr;
+% 
+% image_types = keys( by_image_type );
+% 
+% all_correct = 0;
+% all_initiated = 0;
+% 
+% for i = 1:numel(image_types)
+%   curr = by_image_type(image_types{i});
+%   fprintf( '\n Type: %s; Correct: %d; Initiated: %d', image_types{i}, curr.num_correct, curr.num_initiated );
+%   all_correct = all_correct + curr.num_correct;
+%   all_initiated = all_correct + curr.num_initiated;
+% end
+% 
+% fprintf( '\n Total correct %d; total initiated: %d; total trials: %d' ...
+%   , total_trials, all_correct, all_initiated );
 
 end
 	

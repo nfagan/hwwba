@@ -399,7 +399,7 @@ function handle_timein_popup(source, event)
   position_ = [ x_, y_, w_, l_ ];
   
   time_in = config.TIMINGS.time_in;
-  strs = fieldnames( time_in );
+  strs = sort( fieldnames(time_in) );
   
   if ( numel(strs) == 0 )
     warning( 'No state times given. Skipping time_in construction.' );
