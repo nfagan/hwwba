@@ -11,6 +11,7 @@ TIMER =       opts.TIMER;
 STIMULI =     opts.STIMULI;
 TRACKER =     opts.TRACKER;
 WINDOW =      opts.WINDOW;
+STRUCTURE =   opts.STRUCTURE;
 comm =        opts.SERIAL.comm;
 
 %   begin in this state
@@ -84,7 +85,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     
     no_errors = ~any( structfun(@(x) x, errors) );
     
-    if ( rand() > 0.5 )
+    if ( rand() > STRUCTURE.ja_p_right )
       current_look_direction = 'left';
     else
       current_look_direction = 'right';

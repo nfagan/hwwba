@@ -339,6 +339,7 @@ TASK_ORDER.sm = 5;
 % STRUCTURE
 STRUCTURE = struct();
 STRUCTURE.gf_p_consistent = 0.7;
+STRUCTURE.ja_p_right = 0.5;
 
 % EXPORT
 conf.META = META;
