@@ -9,6 +9,7 @@ if ( ~isKey(by_image_type, image_type) )
   curr = struct();
   curr.num_correct = 0;
   curr.num_initiated = 0;
+  curr.num_total = 0;
   
   if ( include_incorrect )
     curr.num_incorrect = 0;
@@ -30,6 +31,7 @@ if ( did_initiate )
   curr.num_initiated = curr.num_initiated + 1;
 end
 
+curr.num_total = curr.num_total + 1;
 by_image_type(image_type) = curr;
 
 image_types = keys( by_image_type );
@@ -42,11 +44,12 @@ for i = 1:numel(image_types)
   curr = by_image_type(image_types{i});
   
   if ( include_incorrect )
-    fprintf( '\n Type: %s; Correct: %d; Incorrect: %d, Initiated: %d', image_types{i}, curr.num_correct ...
-      , curr.num_incorrect, curr.num_initiated );
+    fprintf( '\n Type: %s; Correct: %d; Incorrect: %d, Initiated: %d; Total: %d', image_types{i}, curr.num_correct ...
+      , curr.num_incorrect, curr.num_initiated, curr.num_total );
     all_incorrect = all_incorrect + curr.num_incorrect;
   else
-    fprintf( '\n Type: %s; Correct: %d; Initiated: %d', image_types{i}, curr.num_correct, curr.num_initiated );
+    fprintf( '\n Type: %s; Correct: %d; Initiated: %d; Total: %d', image_types{i} ...
+      , curr.num_correct, curr.num_initiated, curr.num_total );
   end
   
   all_correct = all_correct + curr.num_correct;

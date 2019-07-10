@@ -94,12 +94,14 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       DATA(tn).cue_delay = current_delay;
       DATA(tn).cue_name = cue_name;
       DATA(tn).cued_image_name = cued_image_name;
+      DATA(tn).initiated = current_did_initiate;
       
       clc;
       print_performance( DATA(tn), PERFORMANCE, tn );
     end
     
     no_errors = ~any( structfun(@(x) x, errors) );
+    current_did_initiate = false;
     
     if ( no_errors )
       if ( rand() > 0.5 )
@@ -218,6 +220,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     
     if ( cue.duration_met() )
       cstate = 'sm_present_image';
+      current_did_initiate = true;
       first_entry = true;
       continue;
     end
@@ -386,10 +389,10 @@ function print_performance(data, perf, total_trials)
 by_image_type = perf.by_image_type;
 image_type = sprintf( '%s | %0.2f', data.trial_type, data.cue_delay );
 
-initiated_func = @(data) ~data.errors.broke_cue_fixation;
+initiated_func = @(data) data.initiated;
 
 hwwba.util.print_performance( data, by_image_type, total_trials ...
-  , image_type, true, initiated_func );
+  , image_type, false, initiated_func );
 
 end
 	
