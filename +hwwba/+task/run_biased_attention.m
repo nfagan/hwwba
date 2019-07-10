@@ -357,7 +357,7 @@ end
 
 function print_performance(data, perf, total_trials)
 
-image_type = sprintf( '%s / %s: %s', data.left_image_category, data.right_image_category, data.directness );
+image_type = '';
 
 initiated_func = @(data) ~data.errors.broke_fixation;
 

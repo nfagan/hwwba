@@ -17,13 +17,16 @@ else
   curr = by_image_type(image_type);
 end
 
-if ( correct_func(data) )
+did_initiate = initiated_func( data );
+
+if ( correct_func(data) && did_initiate )
   curr.num_correct = curr.num_correct + 1;
-elseif ( include_incorrect )
+  
+elseif ( include_incorrect && did_initiate )
   curr.num_incorrect = curr.num_incorrect + 1;
 end
 
-if ( initiated_func(data) )
+if ( did_initiate )
   curr.num_initiated = curr.num_initiated + 1;
 end
 
@@ -47,15 +50,15 @@ for i = 1:numel(image_types)
   end
   
   all_correct = all_correct + curr.num_correct;
-  all_initiated = all_correct + curr.num_initiated;
+  all_initiated = all_initiated + curr.num_initiated;
 end
 
 if ( include_incorrect )
   fprintf( '\n Total correct %d; total incorrect %d; total initiated: %d; total trials: %d' ...
-    , total_trials, all_correct, all_incorrect, all_initiated );
+    , all_correct, all_incorrect, all_initiated, total_trials );
 else
   fprintf( '\n Total correct %d; total initiated: %d; total trials: %d' ...
-    , total_trials, all_correct, all_initiated );
+    , all_correct, all_initiated, total_trials );
 end
 
 end

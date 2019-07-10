@@ -86,6 +86,19 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     
     LOG_DEBUG(['Entered ', cstate], 'entry');
     
+    if ( TRIAL_NUMBER > 0 )
+      tn = TRIAL_NUMBER;
+      
+      DATA(tn).events = events;
+      DATA(tn).errors = errors;
+      DATA(tn).response_direction = ja_response_direction;
+      DATA(tn).image_look_direction = current_look_direction;
+      DATA(tn).image_filename = image_filename;
+      
+      clc;
+      print_performance( DATA(tn), PERFORMANCE, tn );
+    end
+    
     no_errors = ~any( structfun(@(x) x, errors) );
     
     if ( rand() > STRUCTURE.ja_p_right )
@@ -99,18 +112,6 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     image_filename = configure_images( img, img_info, current_look_direction );
 
     LOG_DEBUG( sprintf('Look direction: %s', current_look_direction), 'param' );
-    
-    if ( TRIAL_NUMBER > 0 )
-      tn = TRIAL_NUMBER;
-      
-      DATA(tn).events = events;
-      DATA(tn).errors = errors;
-      DATA(tn).response_direction = ja_response_direction;
-      DATA(tn).image_look_direction = current_look_direction;
-      DATA(tn).image_filename = image_filename;
-      
-      print_performance( DATA(tn), PERFORMANCE, tn );
-    end
     
     events = structfun( @(x) nan, events, 'un', 0 );
     errors = structfun( @(x) false, errors, 'un', 0 );
@@ -259,8 +260,9 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       
       if ( ~isempty(strfind(ja_response_direction, current_look_direction)) )
         cstate = 'ja_reward';
-        errors.incorrect_look_direction = true;
+        errors.incorrect_look_direction = false;
       else
+        errors.incorrect_look_direction = true;
         cstate = 'ja_response_error';
       end
       

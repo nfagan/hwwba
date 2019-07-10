@@ -340,6 +340,18 @@ function print_performance(data, perf, total_trials)
 
 image_type = data.image_type;
 
+if ( strncmpi(image_type, 'eyes', numel('eyes')) )
+  image_type = 'eyes';
+elseif ( strncmpi(image_type, 'mouth', numel('mouth')) )
+  image_type = 'mouth';
+elseif ( strncmpi(image_type, 'scrambled', numel('scrambled')) )
+  image_type = 'scrambled';
+else
+  image_type = 'unknown';
+end
+
+image_type = sprintf( '%s / %s', image_type, data.target_placement );
+
 initiated_func = @(data) ~data.errors.broke_fixation && ~data.errors.fixation_not_met;
 
 hwwba.util.print_performance( data, perf.by_image_type, total_trials ...
