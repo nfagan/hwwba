@@ -211,6 +211,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     
     if ( cue.in_bounds() )
       looked_to_cue = true;      
+      current_did_initiate = true;
     elseif ( looked_to_cue )
       errors.broke_cue_fixation = true;
       cstate = 'sm_cue_error';
@@ -220,7 +221,6 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     
     if ( cue.duration_met() )
       cstate = 'sm_present_image';
-      current_did_initiate = true;
       first_entry = true;
       continue;
     end
@@ -390,9 +390,11 @@ by_image_type = perf.by_image_type;
 image_type = sprintf( '%s | %0.2f', data.trial_type, data.cue_delay );
 
 initiated_func = @(data) data.initiated;
+correct_func = @(data) ~any(structfun(@(x) x, data.errors)) && data.initiated;
+incorrect_func = @(data) data.errors.broke_cue_fixation;
 
 hwwba.util.print_performance( data, by_image_type, total_trials ...
-  , image_type, false, initiated_func );
+  , image_type, true, initiated_func, correct_func, incorrect_func );
 
 end
 	

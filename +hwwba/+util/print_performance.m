@@ -1,5 +1,5 @@
 function print_performance(data, by_image_type, total_trials, image_type, include_incorrect ...
-, initiated_func, correct_func)
+, initiated_func, correct_func, incorrect_func)
 
 if ( nargin < 7 )
   correct_func = @(data) ~any( structfun(@(x) x, data.errors) );
@@ -20,10 +20,14 @@ end
 
 did_initiate = initiated_func( data );
 
+if ( nargin < 8 )
+  incorrect_func = @(x) ~correct_func(x) && did_initiate;
+end
+
 if ( correct_func(data) && did_initiate )
   curr.num_correct = curr.num_correct + 1;
   
-elseif ( include_incorrect && did_initiate )
+elseif ( include_incorrect && incorrect_func(data) )
   curr.num_incorrect = curr.num_incorrect + 1;
 end
 
