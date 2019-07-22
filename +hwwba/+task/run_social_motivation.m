@@ -102,25 +102,23 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     no_errors = ~any( structfun(@(x) x, errors) );
     current_did_initiate = false;
     
-    if ( no_errors )
-      if ( rand() > 0.5 )
-        trial_type = 'social';
-      else
-        trial_type = 'nonsocial';
-      end
-      
-      delays = TIMINGS.delays.sm_cue_delay;
-      current_delay = delays( randperm(numel(delays), 1) );
-      
-      image_info = STIMULI.setup.image_info.sm;
-      cue_name = configure_cue( STIMULI.sm_cue1, image_info, trial_type );
-      cued_image_name = configure_cued_image( STIMULI.sm_image1, image_info, trial_type );
-      
-      LOG_DEBUG( sprintf('trial_type: %s', trial_type), 'param' );
-      LOG_DEBUG( sprintf('delay:      %0.1f', current_delay), 'param' );
-      LOG_DEBUG( sprintf('cue_name:   %s', cue_name), 'param' );
-      LOG_DEBUG( sprintf('cued_image  %s', cued_image_name), 'param' );
+    if ( rand() > 0.5 )
+      trial_type = 'social';
+    else
+      trial_type = 'nonsocial';
     end
+
+    delays = TIMINGS.delays.sm_cue_delay;
+    current_delay = delays( randperm(numel(delays), 1) );
+
+    image_info = STIMULI.setup.image_info.sm;
+    cue_name = configure_cue( STIMULI.sm_cue1, image_info, trial_type );
+    cued_image_name = configure_cued_image( STIMULI.sm_image1, image_info, trial_type );
+
+    LOG_DEBUG( sprintf('trial_type: %s', trial_type), 'param' );
+    LOG_DEBUG( sprintf('delay:      %0.1f', current_delay), 'param' );
+    LOG_DEBUG( sprintf('cue_name:   %s', cue_name), 'param' );
+    LOG_DEBUG( sprintf('cued_image  %s', cued_image_name), 'param' );
     
     events = structfun( @(x) nan, events, 'un', 0 );
     errors = structfun( @(x) false, errors, 'un', 0 );
