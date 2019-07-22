@@ -18,6 +18,9 @@ end
 %   add missing fields to `opts` as necessary
 opts = hwwba.config.reconcile( opts );
 
+opts.PATHS.data = make_data_path( opts.PATHS.data );
+shared_utils.io.require_dir( opts.PATHS.data );
+
 is_debug = opts.INTERFACE.is_debug;
 
 try
@@ -113,6 +116,12 @@ opts.WINDOW = WINDOW;
 opts.TRACKER = TRACKER;
 opts.TIMER = TIMER;
 opts.SERIAL = SERIAL;
+
+end
+
+function data_path = make_data_path(data_root)
+
+data_path = fullfile( data_root, datestr(now, 'mmddyy') );
 
 end
 

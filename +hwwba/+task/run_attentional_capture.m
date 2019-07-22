@@ -32,16 +32,15 @@ TRIAL_IN_BLOCK = 1;
 
 TIMER.add_timer( 'task', Inf );
 
-tracker_sync = struct();
-tracker_sync.timer = NaN;
-tracker_sync.interval = 1;
+tracker_sync = hwwba.util.make_tracker_sync();
 
 stim_handles = rmfield( STIMULI, 'setup' );
 
 % reset task timer
-TIMER.reset_timers( 'ac_task' );
+TASK_TIMER_NAME = 'ac_task';
+TIMER.reset_timers( TASK_TIMER_NAME );
 
-task_timer_id = TIMER.get_underlying_id( 'ac_task' );
+task_timer_id = TIMER.get_underlying_id( TASK_TIMER_NAME );
 task_time_limit = opts.TIMINGS.time_in.ac_task;
 stop_key = INTERFACE.stop_key;
 
@@ -55,7 +54,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
   
   if ( isnan(tracker_sync.timer) || toc(tracker_sync.timer) >= tracker_sync.interval )
     TRACKER.send( 'RESYNCH' );
-    tracker_sync.timer = tic();
+    tracker_sync = hwwba.util.update_tracker_sync( tracker_sync, TIMER.get_time(TASK_TIMER_NAME) );
   end
 
   TRACKER.update_coordinates();
@@ -151,7 +150,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       errors.broke_fixation = false;
       errors.fixation_not_met = false;
       
-      events.(cstate) = TIMER.get_time( 'task' );
+      events.(cstate) = TIMER.get_time( TASK_TIMER_NAME );
       
       first_entry = false;
     end
@@ -162,7 +161,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       fix_square.color = STIMULI.ac_task_identity_cue.color;
       fix_square.draw();
       Screen( 'flip', WINDOW.index );
-      events.ac_fixation_onset = TIMER.get_time( 'task' );
+      events.ac_fixation_onset = TIMER.get_time( TASK_TIMER_NAME );
       drew_stimulus = true;
     end
     
@@ -176,7 +175,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     end
 
     if ( fix_square.duration_met() )
-      events.ac_fixation_acquired = TIMER.get_time( 'task' );
+      events.ac_fixation_acquired = TIMER.get_time( TASK_TIMER_NAME );
       acquired_target = true;
       cstate = 'ac_present_images';
       first_entry = true;
@@ -196,7 +195,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       Screen( 'flip', WINDOW.index );
       TIMER.reset_timers( cstate );
       
-      events.(cstate) = TIMER.get_time( 'task' );
+      events.(cstate) = TIMER.get_time( TASK_TIMER_NAME );
       
       response_stim = STIMULI.ac_response1;
       image_stims = { STIMULI.ac_image1, response_stim };
@@ -213,11 +212,15 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     if ( ~drew_stimulus )
       cellfun( @(x) x.draw(), image_stims );
       Screen( 'flip', WINDOW.index );
-      events.ac_images_on = TIMER.get_time( 'task' );
+      events.ac_images_on = TIMER.get_time( TASK_TIMER_NAME );
       drew_stimulus = true;
     end
     
     if ( response_stim.in_bounds() )
+      if ( ~looked_to_target )
+        events.ac_entered_target = TIMER.get_time( TASK_TIMER_NAME );
+      end
+      
       looked_to_target = true;
     elseif ( looked_to_target )
       cstate = 'ac_response_error';
@@ -242,7 +245,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
   if ( strcmp(cstate, 'ac_reward') )
     if ( first_entry )
       LOG_DEBUG(['Entered ', cstate]);
-      events.ac_reward_on = TIMER.get_time( 'task' );
+      events.ac_reward_on = TIMER.get_time( TASK_TIMER_NAME );
       TIMER.reset_timers( cstate );
       
       comm.reward( 1, opts.REWARDS.ac_main );
@@ -261,7 +264,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
   if ( strcmp(cstate, 'ac_response_error') )
     if ( first_entry )
       LOG_DEBUG(['Entered ', cstate]);
-      events.(cstate) = TIMER.get_time( 'task' );
+      events.(cstate) = TIMER.get_time( TASK_TIMER_NAME );
       TIMER.reset_timers( cstate );
             
       Screen( 'flip', WINDOW.index );
@@ -284,7 +287,7 @@ if ( opts.INTERFACE.save_data )
   
   edf_file = TRACKER.edf;
   
-  save( fullfile(save_p, fname), 'DATA', 'opts', 'edf_file' );
+  save( fullfile(save_p, fname), 'DATA', 'opts', 'edf_file', 'tracker_sync', 'PERFORMANCE' );
 end
 
 TRACKER.shutdown();

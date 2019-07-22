@@ -35,16 +35,15 @@ TRIAL_NUMBER = 0;
 
 TIMER.add_timer( 'task', Inf );
 
-tracker_sync = struct();
-tracker_sync.timer = NaN;
-tracker_sync.interval = 1;
+tracker_sync = hwwba.util.make_tracker_sync();
 
 stim_handles = rmfield( STIMULI, 'setup' );
 
 % reset task timer
-TIMER.reset_timers( 'gf_task' );
+TASK_TIMER_NAME = 'gf_task';
+TIMER.reset_timers( TASK_TIMER_NAME );
 
-task_timer_id = TIMER.get_underlying_id( 'gf_task' );
+task_timer_id = TIMER.get_underlying_id( TASK_TIMER_NAME );
 task_time_limit = opts.TIMINGS.time_in.gf_task;
 stop_key = INTERFACE.stop_key;
 
@@ -58,7 +57,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
   
   if ( isnan(tracker_sync.timer) || toc(tracker_sync.timer) >= tracker_sync.interval )
     TRACKER.send( 'RESYNCH' );
-    tracker_sync.timer = tic();
+    tracker_sync = hwwba.util.update_tracker_sync( tracker_sync, TIMER.get_time(TASK_TIMER_NAME) );
   end
 
   TRACKER.update_coordinates();
@@ -192,7 +191,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       fix_square.color = STIMULI.gf_task_identity_cue.color;
       fix_square.draw();
       Screen( 'flip', WINDOW.index );
-      events.fixation_onset = TIMER.get_time( 'task' );
+      events.fixation_onset = TIMER.get_time( TASK_TIMER_NAME );
       drew_stimulus = true;
     end
     
@@ -206,7 +205,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     end
 
     if ( fix_square.duration_met() )
-      events.fixation_acquired = TIMER.get_time( 'task' );
+      events.fixation_acquired = TIMER.get_time( TASK_TIMER_NAME );
       acquired_target = true;
       cstate = 'gf_present_image';
       first_entry = true;
@@ -236,7 +235,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     if ( ~drew_stimulus )
       cellfun( @(x) x.draw(), image_stims );
       Screen( 'flip', WINDOW.index );
-      events.images_on = TIMER.get_time( 'task' );
+      events.images_on = TIMER.get_time( TASK_TIMER_NAME );
       drew_stimulus = true;
     end
     
@@ -292,11 +291,15 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     if ( ~drew_stimulus )
       cellfun( @(x) x.draw(), image_stims );
       Screen( 'flip', WINDOW.index );
-      events.images_on = TIMER.get_time( 'task' );
+      events.images_on = TIMER.get_time( TASK_TIMER_NAME );
       drew_stimulus = true;
     end
     
     if ( response_target.in_bounds() )
+      if ( ~looked_to_target )
+        events.gf_entered_target = TIMER.get_time( TASK_TIMER_NAME );
+      end
+      
       looked_to_target = true;
     elseif ( looked_to_target )
       errors.broke_target_fixation = true;
@@ -323,7 +326,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     if ( first_entry )
       LOG_DEBUG(['Entered ', cstate], 'entry');
       TIMER.reset_timers( cstate );
-      events.reward_on = TIMER.get_time( 'task' );
+      events.reward_on = TIMER.get_time( TASK_TIMER_NAME );
       Screen( 'flip', WINDOW.index );
       drew_error = false;
       first_entry = false;
@@ -347,7 +350,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       LOG_DEBUG(['Entered ', cstate], 'entry');
       comm.reward( 1, opts.REWARDS.gf_main );
       TIMER.reset_timers( cstate );
-      events.reward_on = TIMER.get_time( 'task' );
+      events.reward_on = TIMER.get_time( TASK_TIMER_NAME );
       Screen( 'flip', WINDOW.index );
       first_entry = false;
     end
@@ -368,7 +371,7 @@ if ( opts.INTERFACE.save_data )
   
   edf_file = TRACKER.edf;
   
-  save( fullfile(save_p, fname), 'DATA', 'opts', 'edf_file' );
+  save( fullfile(save_p, fname), 'DATA', 'opts', 'edf_file', 'tracker_sync', 'PERFORMANCE' );
 end
 
 TRACKER.shutdown();
