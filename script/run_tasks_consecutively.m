@@ -52,6 +52,8 @@ for i = 1:numel(tasks)
   hwwba.task.start( tasks{i}, conf );
 end
 
+hwwba.util.print_latest_performance( conf );
+
 end
 
 function map = get_task_func_map()

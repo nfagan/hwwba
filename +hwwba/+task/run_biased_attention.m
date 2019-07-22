@@ -24,7 +24,7 @@ PERFORMANCE.by_image_type = containers.Map();
 events = struct();
 errors = struct();
 
-image_categories = { 'fear', 'neutral', 'threat', 'lipsmack' };
+image_categories = { 'fear', 'neutral', 'threat' };
 image_directness = { 'direct', 'indirect' };
 image_conditions = get_image_condition_matrix( image_categories, image_directness );
 
