@@ -174,7 +174,7 @@ panels.run = uipanel( F ...
 
 funcs = { 'hard reset', 'clean-up' ...
   , 'Joint Attention', 'Biased Attention', 'Attentional Capture' ...
-  , 'Gaze Following', 'Social Motivation', 'Run all' };
+  , 'Gaze Following', 'Social Motivation', 'Print latest performance', 'Run all' };
 
 w = .5;
 l = 1 / numel(funcs);
@@ -253,6 +253,8 @@ function handle_button(source, event)
   
   func = source.String;
   switch ( func )
+    case 'Print latest performance'
+      hwwba.util.print_latest_performance( config );
     case 'Run all'
       hwwba.config.save( config );
       run_tasks_consecutively( config );

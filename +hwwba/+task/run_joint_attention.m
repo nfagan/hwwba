@@ -318,10 +318,11 @@ if ( opts.INTERFACE.save_data )
   save_p = fullfile( opts.PATHS.data, 'ja' );
   
   shared_utils.io.require_dir( save_p );
+  edf_file = TRACKER.edf;
+  perf_func = @print_performance;
   
-    edf_file = TRACKER.edf;
-  
-  save( fullfile(save_p, fname), 'DATA', 'opts', 'edf_file', 'tracker_sync', 'PERFORMANCE' );
+  save( fullfile(save_p, fname), 'DATA', 'opts', 'edf_file' ...
+    , 'tracker_sync', 'PERFORMANCE', 'perf_func' );
 end
 
 TRACKER.shutdown();
