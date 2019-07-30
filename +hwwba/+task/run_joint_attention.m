@@ -102,8 +102,10 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     
     if ( rand() > STRUCTURE.ja_p_right )
       current_look_direction = 'left';
+      correct_stimulus = STIMULI.ja_response1;
     else
       current_look_direction = 'right';
+      correct_stimulus = STIMULI.ja_response2;
     end
 
     img = STIMULI.ja_image1;
@@ -286,7 +288,16 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       
       comm.reward( 1, opts.REWARDS.ja_main );
       
+      drew_stimuli = false;
       first_entry = false;
+    end
+    
+    if ( STRUCTURE.ja_persist_correct_option && ~drew_stimuli )
+      correct_stimulus.draw();
+      STIMULI.ja_image1.draw();
+      Screen( 'flip', WINDOW.index );
+      
+      drew_stimuli = true;
     end
     
     if ( TIMER.duration_met(cstate) )
@@ -303,6 +314,15 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       TIMER.reset_timers( cstate );
       Screen( 'flip', WINDOW.index );
       first_entry = false;
+      drew_stimuli = false;
+    end
+    
+    if ( STRUCTURE.ja_persist_correct_option && ~drew_stimuli )
+      correct_stimulus.draw();
+      STIMULI.ja_image1.draw();
+      Screen( 'flip', WINDOW.index );
+      
+      drew_stimuli = true;
     end
     
     if ( TIMER.duration_met(cstate) )

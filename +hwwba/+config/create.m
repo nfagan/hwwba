@@ -340,6 +340,7 @@ TASK_ORDER.sm = 5;
 STRUCTURE = struct();
 STRUCTURE.gf_p_consistent = 0.7;
 STRUCTURE.ja_p_right = 0.5;
+STRUCTURE.ja_persist_correct_option = false;
 
 % EXPORT
 conf.META = META;
