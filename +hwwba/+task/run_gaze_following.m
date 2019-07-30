@@ -14,6 +14,7 @@ WINDOW =      opts.WINDOW;
 TIMINGS =     opts.TIMINGS;
 STRUCTURE =   opts.STRUCTURE;
 comm =        opts.SERIAL.comm;
+textures =    opts.TEXTURES;
 
 %   begin in this state
 cstate = 'gf_task_identity';
@@ -146,7 +147,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     errors = structfun( @(x) false, errors, 'un', 0 );
     
     current_image_file = configure_images( ...
-      STIMULI.gf_image1, STIMULI.setup.image_info.gf, current_look_direction ...
+      STIMULI.gf_image1, STIMULI.setup.image_info.gf, current_look_direction, textures ...
     );
   
     LOG_DEBUG(['Current trial type is: ', current_trial_type], 'param');
@@ -407,7 +408,7 @@ ts(true_inds) = true;
 
 end
 
-function name = configure_images(img1, image_info, look_direction)
+function name = configure_images(img1, image_info, look_direction, textures)
 
 if ( ~isa(img1, 'Image') )
   warning( 'Stimulus is not an image.' );
@@ -433,6 +434,7 @@ img_ind = randi( numel(matching_imgs) );
 
 img1.image = matching_imgs{img_ind};
 name = matching_filenames{img_ind};
+img1.set_texture_handle( textures(name) );
 
 end
 

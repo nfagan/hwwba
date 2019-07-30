@@ -12,6 +12,7 @@ STIMULI =     opts.STIMULI;
 TRACKER =     opts.TRACKER;
 WINDOW =      opts.WINDOW;
 comm =        opts.SERIAL.comm;
+textures =    opts.TEXTURES;
 
 %   begin in this state
 cstate = 'ba_task_identity';
@@ -115,7 +116,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       current_directness = image_conditions{condition_index, 3};
       
       [left_image_filename, right_image_filename] = configure_images( im1, im2, im_info ...
-        , left_image_category, right_image_category, current_directness );
+        , left_image_category, right_image_category, current_directness, textures );
       
       block_info.index = block_info.index + 1;
       
@@ -300,7 +301,7 @@ end
 end
 
 function [name1, name2] = configure_images(left_image, right_image, image_info ...
-  , left_image_category, right_image_category, directness)
+  , left_image_category, right_image_category, directness, textures)
 
 name1 = '';
 name2 = '';
@@ -321,6 +322,7 @@ if ( isa(left_image, 'Image') )
   [mat, name] = get_image( left_image_id );
   left_image.image = mat;
   name1 = name;
+  left_image.set_texture_handle( textures(name1) );
 else
   disp( 'WARN: Image 1 is not an image.' );
 end
@@ -329,6 +331,7 @@ if ( isa(right_image, 'Image') )
   [mat, name] = get_image( right_image_id );
   right_image.image = mat;
   name2 = name;
+  right_image.set_texture_handle( textures(name2) );
 else
   disp( 'WARN: Image 2 is not an image.' );
 end

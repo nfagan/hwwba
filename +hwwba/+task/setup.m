@@ -61,7 +61,8 @@ TIMER.register( opts.TIMINGS.time_in );
 max_number_of_images = 20;
 stimuli_subdirs = { stimuli_subdirectory };
 
-image_info = get_images( PATHS.stimuli, is_debug, max_number_of_images, stimuli_subdirs );
+textures = containers.Map();
+image_info = get_images( PATHS.stimuli, is_debug, max_number_of_images, stimuli_subdirs, windex, textures );
 
 %   STIMULI
 stim_fs = fieldnames( STIMULI.setup );
@@ -116,6 +117,7 @@ opts.WINDOW = WINDOW;
 opts.TRACKER = TRACKER;
 opts.TIMER = TIMER;
 opts.SERIAL = SERIAL;
+opts.TEXTURES = textures;
 
 end
 
@@ -125,7 +127,7 @@ data_path = fullfile( data_root, datestr(now, 'mmddyy') );
 
 end
 
-function image_info = get_images(image_path, is_debug, max_n, subfolders)
+function image_info = get_images(image_path, is_debug, max_n, subfolders, window_handle, store_textures)
 
 import shared_utils.io.dirnames;
 percell = @(varargin) cellfun( varargin{:}, 'un', 0 );
@@ -180,6 +182,9 @@ for i = 1:numel(subfolders)
         fprintf( '\n\t Image "%s": %d of %d', filename, k, numel(imgs) );
       end
       imgs{k} = imread( fullfiles{k} );
+      
+      tex_handle = Screen( 'MakeTexture', window_handle, imgs{k} );
+      store_textures(fname(fullfiles{k})) = tex_handle;
     end
     
     images{j} = imgs;

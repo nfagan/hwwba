@@ -13,6 +13,7 @@ TRACKER =     opts.TRACKER;
 WINDOW =      opts.WINDOW;
 TIMINGS =     opts.TIMINGS;
 comm =        opts.SERIAL.comm;
+textures =    opts.TEXTURES;
 
 %   begin in this state
 cstate = 'sm_task_identity';
@@ -112,8 +113,8 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     current_delay = delays( randperm(numel(delays), 1) );
 
     image_info = STIMULI.setup.image_info.sm;
-    cue_name = configure_cue( STIMULI.sm_cue1, image_info, trial_type );
-    cued_image_name = configure_cued_image( STIMULI.sm_image1, image_info, trial_type );
+    cue_name = configure_cue( STIMULI.sm_cue1, image_info, trial_type, textures );
+    cued_image_name = configure_cued_image( STIMULI.sm_image1, image_info, trial_type, textures );
 
     LOG_DEBUG( sprintf('trial_type: %s', trial_type), 'param' );
     LOG_DEBUG( sprintf('delay:      %0.1f', current_delay), 'param' );
@@ -338,19 +339,19 @@ end
 
 end
 
-function name = configure_cue(cue, image_info, trial_type)
+function name = configure_cue(cue, image_info, trial_type, textures)
 
-name = configure_cue_or_cued_image( cue, image_info, 'cue', trial_type );
-
-end
-
-function name = configure_cued_image(cued_image, image_info, trial_type)
-
-name = configure_cue_or_cued_image( cued_image, image_info, 'cued-image', trial_type );
+name = configure_cue_or_cued_image( cue, image_info, 'cue', trial_type, textures );
 
 end
 
-function name = configure_cue_or_cued_image(img, image_info, image_type, trial_type)
+function name = configure_cued_image(cued_image, image_info, trial_type, textures)
+
+name = configure_cue_or_cued_image( cued_image, image_info, 'cued-image', trial_type, textures );
+
+end
+
+function name = configure_cue_or_cued_image(img, image_info, image_type, trial_type, textures)
 
 name = '';
 
@@ -380,6 +381,7 @@ tt_use = randi( numel(tt_imgs) );
 img.image = tt_imgs{tt_use};
 
 name = tt_names{tt_use};
+img.set_texture_handle( textures(name) );
 
 end
 

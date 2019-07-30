@@ -12,6 +12,7 @@ STIMULI =     opts.STIMULI;
 TRACKER =     opts.TRACKER;
 WINDOW =      opts.WINDOW;
 comm =        opts.SERIAL.comm;
+textures =    opts.TEXTURES;
 
 %   begin in this state
 cstate = 'ac_task_identity';
@@ -103,7 +104,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     
     if ( no_errors )
       image_type = image_types{TRIAL_IN_BLOCK};
-      image_file = configure_images( STIMULI.ac_image1, image_info, image_type );
+      image_file = configure_images( STIMULI.ac_image1, image_info, image_type, textures );
     
       TRIAL_IN_BLOCK = TRIAL_IN_BLOCK + 1;
 
@@ -314,7 +315,7 @@ end
 
 end
 
-function file = configure_images(img1, image_info, image_type)
+function file = configure_images(img1, image_info, image_type, textures)
 
 file = '';
 
@@ -336,8 +337,8 @@ ind = find( ind );
 use_ind = ind( randi(numel(ind)) );
 
 img1.image = images{use_ind}{1};
-
 file = image_files{use_ind}{1};
+img1.set_texture_handle( textures(file) );
 
 end
 	

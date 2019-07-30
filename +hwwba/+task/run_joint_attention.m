@@ -13,6 +13,7 @@ TRACKER =     opts.TRACKER;
 WINDOW =      opts.WINDOW;
 STRUCTURE =   opts.STRUCTURE;
 comm =        opts.SERIAL.comm;
+textures =    opts.TEXTURES;
 
 %   begin in this state
 cstate = 'ja_task_identity';
@@ -110,7 +111,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
 
     img = STIMULI.ja_image1;
     img_info = STIMULI.setup.image_info.ja;
-    image_filename = configure_images( img, img_info, current_look_direction );
+    image_filename = configure_images( img, img_info, current_look_direction, textures );
 
     LOG_DEBUG( sprintf('Look direction: %s', current_look_direction), 'param' );
     
@@ -237,7 +238,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       drew_stimulus = true;
     end
     
-    for i = 1:numel(stims)
+    for i = 1:2
       if ( ~stims{i}.in_bounds() )
         if ( ~isempty(looked_to) && strcmp(looked_to, stims{i}.placement) )
           ja_response_direction = '';
@@ -257,7 +258,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
     end
     
     if ( ~isempty(ja_response_direction) )
-      LOG_DEBUG( ['Chose: ', ja_response_direction], 'response' );
+      LOG_DEBUG( ['Chose: ', ja_response_direction, 'Correct: ', current_look_direction], 'response' );
       
       if ( ~isempty(strfind(ja_response_direction, current_look_direction)) )
         cstate = 'ja_reward';
@@ -313,11 +314,16 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       events.ja_response_error = TIMER.get_time( TASK_TIMER_NAME );
       TIMER.reset_timers( cstate );
       Screen( 'flip', WINDOW.index );
+      response_frame = STIMULI.ja_response_frame;
       first_entry = false;
       drew_stimuli = false;
     end
     
     if ( STRUCTURE.ja_persist_correct_option && ~drew_stimuli )
+      configure_response_frame( response_frame, correct_stimulus, 1.5 );
+      
+      response_frame.draw_frame();
+      
       correct_stimulus.draw();
       STIMULI.ja_image1.draw();
       Screen( 'flip', WINDOW.index );
@@ -367,7 +373,25 @@ end
 
 end
 
-function name = configure_images(img1, image_info, look_direction)
+function configure_response_frame(response_frame, correct_stim, scale)
+
+correct_verts = correct_stim.vertices;
+
+cx = mean( correct_verts([1, 3]) );
+cy = mean( correct_verts([2, 4]) );
+
+w = correct_verts(3) - correct_verts(1);
+h = correct_verts(4) - correct_verts(2);
+
+new_w = w * scale;
+new_h = h * scale;
+
+response_frame.vertices = [ cx-new_w/2, cy-new_h/2, cx+new_w/2, cy+new_h/2 ];
+response_frame.pen_width = 16;
+
+end
+
+function name = configure_images(img1, image_info, look_direction, textures)
 
 name = '';
 
@@ -390,6 +414,8 @@ matching_files = filenames{dir_ind};
 img_ind = randi( numel(matching_files) );
 
 img1.image = matching_images{img_ind};
+img1.set_texture_handle(textures(matching_files{img_ind}));
+
 name = matching_files{img_ind};
 
 end
