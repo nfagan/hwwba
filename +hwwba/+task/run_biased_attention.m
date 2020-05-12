@@ -46,6 +46,9 @@ task_timer_id = TIMER.get_underlying_id( TASK_TIMER_NAME );
 task_time_limit = opts.TIMINGS.time_in.ba_task;
 stop_key = INTERFACE.stop_key;
 
+key_press_reward_manager = ...
+  hwwba.util.make_key_press_reward_manager( comm, 1, opts.REWARDS.key_press );
+
 while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key) )
   
   if ( isnan(tracker_sync.timer) || toc(tracker_sync.timer) >= tracker_sync.interval )
@@ -55,6 +58,8 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
 
   TRACKER.update_coordinates();
   structfun( @(x) x.update_targets(), stim_handles );
+  
+  key_press_reward_manager.update();
   
   %   STATE task_identity  
   if ( strcmp(cstate, 'ba_task_identity') )

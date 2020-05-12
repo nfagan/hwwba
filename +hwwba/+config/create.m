@@ -331,6 +331,7 @@ REWARDS.sm_main = 100;
 REWARDS.ac_main = 100;
 REWARDS.ba_main = 100;
 REWARDS.ja_main = 100;
+REWARDS.ja_bridge = 50;
 REWARDS.gf_main = 100;
 
 %	SERIAL

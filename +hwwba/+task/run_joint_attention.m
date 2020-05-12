@@ -42,6 +42,9 @@ task_timer_id = TIMER.get_underlying_id( TASK_TIMER_NAME );
 task_time_limit = opts.TIMINGS.time_in.ja_task;
 stop_key = INTERFACE.stop_key;
 
+key_press_reward_manager = ...
+  hwwba.util.make_key_press_reward_manager( comm, 1, opts.REWARDS.key_press );
+
 while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key) )
 
   [key_pressed, ~, key_code] = KbCheck();
@@ -57,6 +60,8 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
 
   TRACKER.update_coordinates();
   structfun( @(x) x.update_targets(), stim_handles );
+  
+  key_press_reward_manager.update();
   
   %   STATE task_identity  
   if ( strcmp(cstate, 'ja_task_identity') )
@@ -317,6 +322,7 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       response_frame = STIMULI.ja_response_frame;
       first_entry = false;
       drew_stimuli = false;
+      triggered_bridge_reward = false;
     end
     
     if ( STRUCTURE.ja_persist_correct_option && ~drew_stimuli )
@@ -329,6 +335,13 @@ while ( hwwba.util.task_should_continue(task_timer_id, task_time_limit, stop_key
       Screen( 'flip', WINDOW.index );
       
       drew_stimuli = true;
+    end
+    
+    if ( STRUCTURE.ja_persist_correct_option )
+      if ( correct_stimulus.in_bounds() && ~triggered_bridge_reward )
+        comm.reward( 1, opts.REWARDS.ja_bridge );
+        triggered_bridge_reward = true;
+      end
     end
     
     if ( TIMER.duration_met(cstate) )
