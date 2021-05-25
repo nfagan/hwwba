@@ -173,8 +173,7 @@ panels.run = uipanel( F ...
 );
 
 funcs = { 'hard reset', 'clean-up' ...
-  , 'Joint Attention', 'Biased Attention', 'Attentional Capture' ...
-  , 'Gaze Following', 'Social Motivation', 'Print latest performance', 'Run all' };
+  , 'J', 'B', 'A', 'G', 'S', 'Print latest performance', 'Run all' };
 
 w = .5;
 l = 1 / numel(funcs);
